@@ -47,7 +47,9 @@ async function handleLogin() {
   error.value = ''
   try {
     // 预览环境自动填充默认账号，方便客户演示
-    if (window.location.hostname.includes('vercel.app') && !form.username) {
+    const isPreviewHost = window.location.hostname.includes('vercel.app') || 
+                         window.location.hostname.includes('zeabur.app');
+    if (isPreviewHost && !form.username) {
       form.username = 'admin'
       form.password = 'admin123'
     }

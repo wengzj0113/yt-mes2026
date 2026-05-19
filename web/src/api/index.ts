@@ -10,8 +10,10 @@ const http = axios.create({
   timeout: 15000,
 })
 
-// Vercel 预览环境或无后端环境开启 Mock
-const isPreview = import.meta.env.MODE === 'production' || window.location.hostname.includes('vercel.app')
+// Vercel/Zeabur 预览环境或无后端环境开启 Mock
+const isPreview = import.meta.env.MODE === 'production' || 
+                 window.location.hostname.includes('vercel.app') ||
+                 window.location.hostname.includes('zeabur.app')
 
 http.interceptors.request.use((config) => {
   // Mock 拦截逻辑
