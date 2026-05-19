@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>仪表盘升级设计原型 - 数据中枢型 (亮色系)</title>
+    <style>
+        :root {
+            --primary: #409eff;
+            --success: #67c23a;
+            --warning: #e6a23c;
+            --danger: #f56c6c;
+            --info: #909399;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-main: #303133;
+            --text-sub: #606266;
+            --border: #ebeef5;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--text-main); }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: auto 400px 1fr;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        /* 通用卡片样式 */
+        .card { background: var(--card-bg); border-radius: 8px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); display: flex; flex-direction: column; }
+        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-main); }
+        
+        /* 顶部统计卡片 */
+        .top-stats { grid-column: 1 / 4; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .stat-item { text-align: center; }
+        .stat-val { font-size: 28px; font-weight: bold; color: var(--primary); }
+        .stat-lab { font-size: 13px; color: var(--text-sub); margin-top: 5px; }
+
+        /* 左侧：实时告警 */
+        .left-panel { grid-row: 2 / 4; }
+        .alert-list { flex: 1; overflow-y: auto; }
+        .alert-item { padding: 10px; border-radius: 4px; background: #fff5f5; border-left: 4px solid var(--danger); margin-bottom: 10px; font-size: 13px; }
+        .alert-time { font-size: 11px; color: var(--info); margin-bottom: 4px; }
+
+        /* 中间：数据中枢 */
+        .center-panel { grid-row: 2 / 3; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .main-gauge { width: 280px; height: 280px; border-radius: 50%; border: 15px solid #ecf5ff; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .main-gauge::after { content: ""; position: absolute; top: -15px; left: -15px; right: -15px; bottom: -15px; border-radius: 50%; border: 15px solid var(--primary); border-bottom-color: transparent; border-left-color: transparent; }
+        .gauge-val { font-size: 48px; font-weight: bold; color: var(--primary); }
+        .gauge-lab { font-size: 14px; color: var(--text-sub); }
+
+        /* 右侧：最近批次 */
+        .right-panel { grid-row: 2 / 4; }
+        .batch-list { flex: 1; }
+        .batch-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .batch-no { font-weight: 500; font-size: 14px; }
+        .batch-progress { height: 6px; background: #eee; border-radius: 3px; margin-top: 8px; overflow: hidden; position: relative; }
+        .progress-bar { height: 100%; background: var(--success); width: 65%; }
+
+        /* 底部：质量趋势 */
+        .bottom-panel { grid-column: 2 / 3; grid-row: 3 / 4; }
+        .trend-chart { height: 150px; display: flex; align-items: flex-end; gap: 10px; padding-bottom: 10px; }
+        .chart-bar { flex: 1; background: #ecf5ff; border-radius: 4px 4px 0 0; position: relative; transition: height 0.3s; }
+        .chart-bar-inner { position: absolute; bottom: 0; left: 0; right: 0; background: var(--primary); border-radius: 4px 4px 0 0; opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-grid">
+        <!-- Top Stats -->
+        <div class="top-stats">
+            <div class="card stat-item"><div class="stat-val">128</div><div class="stat-lab">累计生产批次</div></div>
+            <div class="card stat-item"><div class="stat-val">15</div><div class="stat-lab">当前在线批次</div></div>
+            <div class="card stat-item"><div class="stat-val" style="color:var(--success)">98.2%</div><div class="stat-lab">当日合格率</div></div>
+            <div class="card stat-item"><div class="stat-val" style="color:var(--danger)">3</div><div class="stat-lab">异常待处理</div></div>
+        </div>
+
+        <!-- Left: Alerts -->
+        <div class="card left-panel">
+            <div class="card-title">🚨 实时生产异常</div>
+            <div class="alert-list">
+                <div class="alert-item">
+                    <div class="alert-time">14:20:05</div>
+                    批次 <b>WT-20260518-01</b> 卷绕工序漏扫码
+                </div>
+                <div class="alert-item" style="background:#fdf6ec; border-left-color:var(--warning)">
+                    <div class="alert-time">14:15:32</div>
+                    设备 <b>EQ-05 (分选机)</b> 通讯延迟
+                </div>
+                <div class="alert-item">
+                    <div class="alert-time">13:58:12</div>
+                    批次 <b>WT-20260517-09</b> K值超差 (0.052 > 0.050)
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Hub -->
+        <div class="card center-panel">
+            <div class="card-title">🎯 追溯数据中枢</div>
+            <div class="main-gauge">
+                <div class="gauge-val">99.5%</div>
+                <div class="gauge-lab">追溯完整率</div>
+            </div>
+            <div style="margin-top:20px; text-align:center;">
+                <div style="font-size:14px; color:var(--text-sub)">全厂数据同步正常</div>
+                <div style="font-size:12px; color:var(--info); margin-top:5px;">上次更新: 刚刚</div>
+            </div>
+        </div>
+
+        <!-- Right: Batches -->
+        <div class="card right-panel">
+            <div class="card-title">📦 最近批次流转</div>
+            <div class="batch-list">
+                <div class="batch-item">
+                    <div class="batch-no">WT-20260518-01</div>
+                    <div style="font-size:12px; color:var(--text-sub); margin-top:4px;">当前工序: 卷绕</div>
+                    <div class="batch-progress"><div class="progress-bar" style="width:45%"></div></div>
+                </div>
+                <div class="batch-item">
+                    <div class="batch-no">WT-20260518-02</div>
+                    <div style="font-size:12px; color:var(--text-sub); margin-top:4px;">当前工序: 涂布</div>
+                    <div class="batch-progress"><div class="progress-bar" style="width:15%"></div></div>
+                </div>
+                <div class="batch-item">
+                    <div class="batch-no">WT-20260517-12</div>
+                    <div style="font-size:12px; color:var(--text-sub); margin-top:4px;">当前工序: 已完成</div>
+                    <div class="batch-progress"><div class="progress-bar" style="width:100%"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom: Trend -->
+        <div class="card bottom-panel">
+            <div class="card-title">📈 质量合格率趋势 (最近10批次)</div>
+            <div class="trend-chart">
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:98%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:95%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:99%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:92%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:100%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:97%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:98%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:96%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:94%"></div></div>
+                <div class="chart-bar"><div class="chart-bar-inner" style="height:99%"></div></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

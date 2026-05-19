@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>仪表盘升级方案 - 追溯管理风</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; padding: 40px; color: #333; }
+        h1 { text-align: center; color: #303133; margin-bottom: 40px; }
+        .container { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
+        .card { background: white; border-radius: 12px; padding: 24px; width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 6px solid #409eff; transition: transform 0.3s; cursor: pointer; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+        h2 { font-size: 20px; margin-top: 0; color: #1f2f3d; display: flex; align-items: center; gap: 10px; }
+        .desc { font-size: 14px; color: #606266; line-height: 1.6; margin-bottom: 20px; height: 45px; }
+        .tag-group { margin-top: 15px; display: flex; gap: 8px; }
+        .tag { padding: 4px 10px; background: #ecf5ff; color: #409eff; border-radius: 4px; font-size: 12px; font-weight: 500; }
+        .mockup { background: #f8f9fb; height: 200px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid #ebeef5; position: relative; overflow: hidden; }
+        
+        /* Mockup 1: Workflow */
+        .workflow { display: flex; align-items: center; gap: 5px; }
+        .node { width: 30px; height: 15px; background: #409eff; border-radius: 2px; }
+        .node.stack { height: 50px; background: #e6a23c; position: relative; }
+        .node.stack::after { content: "!"; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); color: #e6a23c; font-weight: bold; }
+        .node.empty { opacity: 0.2; }
+
+        /* Mockup 2: Integrity */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 80%; }
+        .stat-box { background: white; padding: 12px; text-align: center; border-radius: 6px; border: 1px solid #f0f0f0; }
+        .stat-val { font-size: 24px; font-weight: bold; margin-bottom: 4px; }
+        .stat-lab { font-size: 12px; color: #909399; }
+
+        /* Mockup 3: Hybrid */
+        .hybrid-content { width: 90%; display: flex; flex-direction: column; gap: 10px; }
+        .alert { border-left: 4px solid #f56c6c; background: #fff5f5; padding: 8px 12px; font-size: 12px; color: #f56c6c; border-radius: 4px; }
+        .mini-chart { height: 60px; background: #ecf5ff; border-radius: 4px; position: relative; }
+        .bar { position: absolute; bottom: 0; background: #409eff; width: 10%; border-radius: 2px 2px 0 0; }
+    </style>
+</head>
+<body>
+    <h1>仪表盘升级方案 - 追溯管理风</h1>
+    <div class="container">
+        <!-- Approach 1 -->
+        <div class="card">
+            <h2>📊 全链路流转图</h2>
+            <div class="desc">侧重于直观展示批次在 13 道工序中的动态分布，一眼识别生产瓶颈。</div>
+            <div class="mockup">
+                <div class="workflow">
+                    <div class="node empty"></div>
+                    <div class="node"></div>
+                    <div class="node stack"></div>
+                    <div class="node"></div>
+                    <div class="node empty"></div>
+                    <div class="node empty"></div>
+                </div>
+                <div style="position:absolute; bottom:15px; font-size:11px; color:#e6a23c">⚠️ 卷绕工序堆积: 8 批次</div>
+            </div>
+            <div class="tag-group">
+                <span class="tag">瓶颈定位</span>
+                <span class="tag">产能地图</span>
+            </div>
+        </div>
+
+        <!-- Approach 2 -->
+        <div class="card">
+            <h2>🔍 数据健康看板</h2>
+            <div class="desc">侧重于“追溯覆盖率”与“质量一致性”，专门捕捉数据缺失与异常批次。</div>
+            <div class="mockup">
+                <div class="stat-grid">
+                    <div class="stat-box"><div class="stat-val" style="color:#f56c6c">12</div><div class="stat-lab">漏扫码批次</div></div>
+                    <div class="stat-box"><div class="stat-val" style="color:#e6a23c">5%</div><div class="stat-lab">K值超差率</div></div>
+                    <div class="stat-box"><div class="stat-val" style="color:#67c23a">99.8%</div><div class="stat-lab">追溯完整率</div></div>
+                    <div class="stat-box"><div class="stat-val" style="color:#409eff">2.4k</div><div class="stat-lab">今日扫码量</div></div>
+                </div>
+            </div>
+            <div class="tag-group">
+                <span class="tag">异常熔断</span>
+                <span class="tag">质量合规</span>
+            </div>
+        </div>
+
+        <!-- Approach 3 -->
+        <div class="card">
+            <h2>🚀 运营驾驶舱</h2>
+            <div class="desc">混合视图：左侧实时滚动异常告警，右侧工序进度，下方追溯趋势。</div>
+            <div class="mockup">
+                <div class="hybrid-content">
+                    <div class="alert">🚨 批次 WT-001: 烘烤时间不足</div>
+                    <div class="alert" style="border-color:#e6a23c; color:#e6a23c; background:#fdf6ec">⚠️ 设备 EQ-09: 维护提醒</div>
+                    <div class="mini-chart">
+                        <div class="bar" style="height:40%; left:5%"></div>
+                        <div class="bar" style="height:70%; left:20%"></div>
+                        <div class="bar" style="height:90%; left:35%"></div>
+                        <div class="bar" style="height:50%; left:50%"></div>
+                        <div class="bar" style="height:30%; left:65%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="tag-group">
+                <span class="tag">实时指挥</span>
+                <span class="tag">决策中心</span>
+            </div>
+        </div>
+    </div>
+    <div style="text-align:center; margin-top:30px; color:#909399; font-size:14px;">
+        点击上方方案即可展开详细设计思路
+    </div>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<template>
+  <div class="batch-detail">
+    <el-card v-if="batch" class="info-card">
+      <div class="page-header">
+        <h3>批次详情 - {{ batch.batchNo }}</h3>
+        <el-button @click="$router.push('/batches')">返回列表</el-button>
+      </div>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="批次号">{{ batch.batchNo }}</el-descriptions-item>
+        <el-descriptions-item label="产品型号">{{ batch.productModel }}</el-descriptions-item>
+        <el-descriptions-item label="产品规格">{{ batch.productSpec }}</el-descriptions-item>
+        <el-descriptions-item label="计划数量">{{ batch.plannedQty }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ batch.createdAt }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <el-card class="section-card">
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="工序数据" name="processes">
+          <el-row :gutter="16">
+            <el-col :span="6" v-for="proc in processes" :key="proc.route">
+              <el-card shadow="hover" class="proc-card" @click="navigate(proc.route)">
+                <h4>{{ proc.processName }}</h4>
+                <el-tag :type="statusTag(proc.status)" size="small">{{ statusText(proc.status) }}</el-tag>
+                <p v-if="proc.updatedAt" class="proc-time">{{ formatTime(proc.updatedAt) }}</p>
+              </el-card>
+            </el-col>
+          </el-row>
+        </el-tab-pane>
+
+        <el-tab-pane label="电芯列表" name="cells">
+          <div class="toolbar">
+            <el-button type="primary" size="small" @click="goImportBarcode">导入电芯</el-button>
+            <span class="cell-count" v-if="cellTotal > 0">共 {{ cellTotal }} 个电芯</span>
+          </div>
+          <el-table :data="cellList" v-loading="cellLoading" stripe empty-text="暂未导入电芯">
+            <el-table-column prop="barcode" label="电芯码" min-width="160" />
+            <el-table-column prop="voltage" label="电压(V)" width="100">
+              <template #default="{ row }">{{ row.voltage?.toFixed(3) }}</template>
+            </el-table-column>
+            <el-table-column prop="internalResistance" label="内阻(mΩ)" width="100" />
+            <el-table-column prop="capacity" label="容量(mAh)" width="100" />
+            <el-table-column prop="grade" label="等级" width="80" />
+            <el-table-column prop="importedAt" label="导入时间" width="180" />
+            <el-table-column label="操作" width="100">
+              <template #default="{ row }">
+                <el-link type="primary" @click="goCellTrace(row.barcode)">追溯</el-link>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="pagination-wrap" v-if="cellTotal > pageSize">
+            <el-pagination
+              v-model:current-page="cellPage"
+              :page-size="pageSize"
+              :total="cellTotal"
+              layout="total, prev, pager, next"
+              @current-change="loadCells"
+            />
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+
+    <el-card class="section-card">
+      <h3 class="section-title">批次状态日志</h3>
+      <el-timeline v-if="statusLogs.length > 0">
+        <el-timeline-item
+          v-for="item in statusLogs"
+          :key="`${item.createdAt}-${item.toStatus}`"
+          :timestamp="formatTime(item.createdAt)"
+        >
+          {{ item.changeReason || `状态变更为 ${item.toStatus}` }}
+        </el-timeline-item>
+      </el-timeline>
+      <el-empty v-else description="暂无状态日志" />
+    </el-card>
+
+    <el-card class="section-card">
+      <h3 class="section-title">相关操作</h3>
+      <el-space wrap>
+        <el-button type="success" @click="navigate('quality')">质量检验</el-button>
+        <el-button type="warning" @click="navigate('materials')">材料仓库</el-button>
+        <el-button type="primary" @click="goCellTraceByBatch">电芯追溯</el-button>
+      </el-space>
+    </el-card>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { batchApi, type ProcessStatusItem } from '@/api/batch'
+import { cellApi, type CellBarcodeRecord } from '@/api/cells'
+import { statusLogApi, type BatchStatusLogItem } from '@/api/status-log'
+import type { BatchDto } from '@/types/api'
+
+const route = useRoute()
+const router = useRouter()
+const batch = ref<BatchDto | null>(null)
+const processes = ref<ProcessStatusItem[]>([])
+const statusLogs = ref<BatchStatusLogItem[]>([])
+const activeTab = ref('processes')
+
+// Cell list state
+const cellList = ref<CellBarcodeRecord[]>([])
+const cellLoading = ref(false)
+const cellPage = ref(1)
+const pageSize = 20
+const cellTotal = ref(0)
+
+function statusTag(status: string): string {
+  return { not_entered: 'info', draft: 'warning', submitted: 'success', voided: 'danger' }[status] || 'info'
+}
+
+function statusText(status: string): string {
+  return { not_entered: '待录入', draft: '录入完成', submitted: '已提交', voided: '已作废' }[status] || status
+}
+
+function formatTime(iso: string): string {
+  return iso ? iso.slice(0, 16).replace('T', ' ') : ''
+}
+
+function navigate(path: string) {
+  const batchNo = batch.value?.batchNo
+  if (!batchNo) return
+  if (path === 'quality') router.push(`/quality/${batchNo}`)
+  else if (path === 'materials') router.push(`/materials/${batchNo}`)
+  else router.push(`/processes/${batchNo}/${path}`)
+}
+
+function goImportBarcode() {
+  router.push(`/cells?batchNo=${batch.value?.batchNo}`)
+}
+
+function goCellTrace(barcode: string) {
+  router.push(`/trace?barcode=${barcode}`)
+}
+
+function goCellTraceByBatch() {
+  router.push(`/trace?batchNo=${batch.value?.batchNo}`)
+}
+
+async function loadCells() {
+  const batchNo = batch.value?.batchNo
+  if (!batchNo) return
+  cellLoading.value = true
+  try {
+    const res = await cellApi.findByBatch(batchNo, cellPage.value, pageSize)
+    cellList.value = res.data
+    cellTotal.value = res.meta?.total ?? 0
+  } catch {
+    cellList.value = []
+    cellTotal.value = 0
+  } finally {
+    cellLoading.value = false
+  }
+}
+
+async function loadData() {
+  const batchNo = route.params.batchNo as string
+  if (!batchNo) return
+
+  const [batchRes, statusRes] = await Promise.all([
+    batchApi.getByNo(batchNo).catch(() => null),
+    batchApi.getProcessStatus(batchNo).catch(() => [] as any),
+  ])
+
+  if (batchRes) batch.value = batchRes.data
+  processes.value = Array.isArray(statusRes) ? statusRes : (statusRes as any)?.data || []
+
+  try {
+    const logsRes = await statusLogApi.list(batchNo)
+    statusLogs.value = logsRes.data ?? []
+  } catch {
+    statusLogs.value = []
+  }
+}
+
+onMounted(async () => {
+  await loadData()
+  loadCells()
+})
+</script>
+
+<style scoped>
+.info-card { margin-bottom: 20px; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.page-header h3 { margin: 0; }
+.section-card { margin-bottom: 20px; }
+.section-title { margin: 0 0 16px; font-size: 16px; }
+.proc-card { text-align: center; cursor: pointer; margin-bottom: 16px; transition: transform .2s; }
+.proc-card:hover { transform: translateY(-2px); }
+.proc-card h4 { margin: 0 0 8px; }
+.proc-time { font-size: 12px; color: #909399; margin-top: 6px; }
+.toolbar { margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+.cell-count { font-size: 13px; color: #909399; }
+.pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
+</style>
