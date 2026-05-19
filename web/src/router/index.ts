@@ -58,6 +58,15 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
+  
+  // 生产环境下，如果尝试在 8080 端口访问大屏，重定向到 8081
+  if (to.name === 'BigScreen' && !import.meta.env.DEV && window.location.port !== '8081') {
+    const protocol = window.location.protocol
+    const host = window.location.hostname
+    window.location.href = `${protocol}//${host}:8081`
+    return
+  }
+
   if (to.meta.public || auth.isLoggedIn) {
     next()
   } else {

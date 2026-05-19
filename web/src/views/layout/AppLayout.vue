@@ -14,7 +14,7 @@
             <el-icon><HomeFilled /></el-icon>
             <span>仪表盘</span>
           </el-menu-item>
-          <el-menu-item index="/big-screen" @click.prevent="openBigScreen">
+          <el-menu-item index="big-screen-link" @click="openBigScreen">
             <el-icon><DataLine /></el-icon>
             <span>大屏看板</span>
           </el-menu-item>
@@ -87,6 +87,12 @@ const route = useRoute()
 const activeMenu = computed(() => route.path)
 
 function openBigScreen() {
+  // 开发环境下保持在原端口跳转，生产环境下跳转到 8081 端口
+  if (import.meta.env.DEV) {
+    router.push({ name: 'BigScreen' })
+    return
+  }
+  
   const protocol = window.location.protocol
   const host = window.location.hostname
   const port = '8081'
