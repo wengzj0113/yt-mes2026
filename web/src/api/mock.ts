@@ -1,5 +1,10 @@
 import type { ApiResponse } from '@/types/api';
 
+// 生成一个模拟的 JWT Token 结构 (header.payload.signature)
+// payload 部分 Base64: {"sub":1,"username":"admin","roleCode":4}
+const MOCK_JWT_PAYLOAD = btoa(JSON.stringify({ sub: 1, username: 'admin', roleCode: 4 }));
+const MOCK_TOKEN = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${MOCK_JWT_PAYLOAD}.mock_signature`;
+
 /**
  * 模拟生产全链路数据
  * 用于 Vercel 预览环境，确保客户在没有后端的情况下也能体验完整流程
@@ -9,7 +14,7 @@ export const mockData: Record<string, any> = {
   '/auth/login': {
     success: true,
     data: {
-      accessToken: 'mock-access-token-' + Date.now(),
+      accessToken: MOCK_TOKEN,
       refreshToken: 'mock-refresh-token-' + Date.now(),
       user: {
         id: 1,
