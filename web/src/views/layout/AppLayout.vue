@@ -87,7 +87,10 @@ const route = useRoute()
 const activeMenu = computed(() => route.path)
 
 function openBigScreen() {
-  const url = router.resolve({ name: 'BigScreen' }).href
+  const protocol = window.location.protocol
+  const host = window.location.hostname
+  const port = '8081'
+  const url = `${protocol}//${host}:${port}`
   window.open(url, '_blank')
 }
 
