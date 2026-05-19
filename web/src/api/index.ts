@@ -3,27 +3,46 @@ import { ElMessage } from 'element-plus'
 import type { ApiResponse } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
+import { getMockResponse } from './mock'
 
 const http = axios.create({
   baseURL: '/api',
   timeout: 15000,
 })
 
-let isRefreshing = false
-let refreshEpoch = 0
-let pendingRequests: Array<{
-  resolve: (token: string) => void
-  reject: (err: unknown) => void
-}> = []
+// Vercel 预览环境或无后端环境开启 Mock
+const isPreview = import.meta.env.MODE === 'production' || window.location.hostname.includes('vercel.app')
 
 http.interceptors.request.use((config) => {
-  const authStore = useAuthStore()
-  if (authStore.token) {
-    config.headers.Authorization = `Bearer ${authStore.token}`
+  // Mock 拦截逻辑
+  if (isPreview) {
+    const mockRes = getMockResponse(config)
+    if (mockRes) {
+      console.log(`[Mock API] ${config.method?.toUpperCase()} ${config.url}`, mockRes)
+      config.adapter = async () => ({
+        data: mockRes,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config
+      })
+    }
   }
-  ;(config as any)._refreshEpoch = refreshEpoch
-  return config
-})
+
+  const authStore = useAuthStore()
+    if (authStore.token) {
+      config.headers.Authorization = `Bearer ${authStore.token}`
+    }
+    ;(config as any)._refreshEpoch = refreshEpoch
+    return config
+  })
+  
+  let isRefreshing = false
+  let refreshEpoch = 0
+  let pendingRequests: Array<{
+    resolve: (token: string) => void
+    reject: (err: unknown) => void
+  }> = []
 
 async function attemptRefresh(
   currentRefreshToken: string,

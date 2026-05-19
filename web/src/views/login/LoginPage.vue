@@ -46,6 +46,11 @@ async function handleLogin() {
   loading.value = true
   error.value = ''
   try {
+    // 预览环境自动填充默认账号，方便客户演示
+    if (window.location.hostname.includes('vercel.app') && !form.username) {
+      form.username = 'admin'
+      form.password = 'admin123'
+    }
     await authStore.login(form.username.trim(), form.password)
     router.push('/dashboard')
   } catch (e: any) {
