@@ -14,6 +14,10 @@
             <el-icon><HomeFilled /></el-icon>
             <span>仪表盘</span>
           </el-menu-item>
+          <el-menu-item index="/big-screen" @click.prevent="openBigScreen">
+            <el-icon><DataLine /></el-icon>
+            <span>大屏看板</span>
+          </el-menu-item>
           <el-menu-item index="/batches">
             <el-icon><List /></el-icon><span>批次管理</span>
           </el-menu-item>
@@ -75,12 +79,17 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { HomeFilled, List, Setting, Coin, User, UserFilled, OfficeBuilding, Monitor, Document, Tools } from '@element-plus/icons-vue'
+import { HomeFilled, List, Setting, Coin, User, UserFilled, OfficeBuilding, Monitor, Document, Tools, DataLine } from '@element-plus/icons-vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const activeMenu = computed(() => route.path)
+
+function openBigScreen() {
+  const url = router.resolve({ name: 'BigScreen' }).href
+  window.open(url, '_blank')
+}
 
 function handleCommand(cmd: string) {
   if (cmd === 'logout') {

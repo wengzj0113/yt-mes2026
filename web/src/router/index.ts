@@ -14,7 +14,7 @@ const router = createRouter({
     {
     path: '/big-screen',
     name: 'BigScreen',
-    component: () => import('../views/dashboard/BigScreenPage.vue'),
+    component: () => import('@/views/dashboard/BigScreenPage.vue'),
     meta: { title: '大屏看板' }
   },
   {

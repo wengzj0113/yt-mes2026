@@ -1,54 +1,60 @@
 <template>
-  <div class="scale-wrapper" ref="wrapperRef" :style="wrapperStyle">
-    <div class="scale-content" :style="contentStyle">
+  <div class="scale-screen-container" :style="containerStyle">
+    <div class="scale-screen-wrapper" :style="wrapperStyle" ref="wrapperRef">
       <slot></slot>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
   width: { type: Number, default: 1920 },
-  height: { type: Number, default: 1080 }
-});
+  height: { type: Number, default: 1080 },
+})
 
-const wrapperRef = ref<HTMLElement | null>(null);
-const scale = ref(1);
-
-const updateScale = () => {
-  if (!wrapperRef.value) return;
-  const clientWidth = document.documentElement.clientWidth;
-  const clientHeight = document.documentElement.clientHeight;
-  const scaleX = clientWidth / props.width;
-  const scaleY = clientHeight / props.height;
-  scale.value = Math.min(scaleX, scaleY);
-};
-
-onMounted(() => {
-  updateScale();
-  window.addEventListener('resize', updateScale);
-});
-onUnmounted(() => {
-  window.removeEventListener('resize', updateScale);
-});
-
-const wrapperStyle = computed(() => ({
+const wrapperRef = ref<HTMLElement | null>(null)
+const containerStyle = reactive({
   width: '100vw',
   height: '100vh',
-  backgroundColor: '#000',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  overflow: 'hidden'
-}));
+  overflow: 'hidden',
+  background: '#030409',
+})
 
-const contentStyle = computed(() => ({
+const wrapperStyle = reactive({
   width: `${props.width}px`,
   height: `${props.height}px`,
-  transform: `scale(${scale.value})`,
-  transformOrigin: 'center center',
-  transition: 'transform 0.3s'
-}));
+  transform: 'scale(1) translate(-50%, -50%)',
+  transformOrigin: '0 0',
+  position: 'absolute' as const,
+  left: '50%',
+  top: '50%',
+  transition: 'all 0.3s ease',
+})
+
+function handleScale() {
+  if (!wrapperRef.value) return
+  const ww = window.innerWidth / props.width
+  const wh = window.innerHeight / props.height
+  const scale = Math.min(ww, wh)
+  wrapperStyle.transform = `scale(${scale}) translate(-50%, -50%)`
+}
+
+onMounted(() => {
+  handleScale()
+  window.addEventListener('resize', handleScale)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleScale)
+})
 </script>
+
+<style scoped>
+.scale-screen-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+</style>

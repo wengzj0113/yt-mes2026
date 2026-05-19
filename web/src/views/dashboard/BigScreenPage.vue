@@ -82,7 +82,7 @@ const processes = ref<any[]>([]);
 let eventSource: EventSource | null = null;
 
 onMounted(() => {
-  eventSource = new EventSource('http://localhost:3001/api/dashboard/stream');
+  eventSource = new EventSource('/api/dashboard/stream');
   eventSource.onmessage = (event) => {
     const res = JSON.parse(event.data);
     totalCellsConfig.number = [res.topMetrics.totalCells];
