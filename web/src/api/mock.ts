@@ -1,4 +1,4 @@
-import { ApiResponse } from '@/types/api';
+import type { ApiResponse } from '@/types/api';
 
 /**
  * 模拟生产全链路数据
