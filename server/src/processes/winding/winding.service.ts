@@ -6,6 +6,12 @@ import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateWindingDraftDto } from './dto/create-draft.dto';
 import { SubmitWindingQualityDto } from './dto/submit-quality.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const WINDING_ENTITY_FIELDS = [
+  'equipmentCode', 'separatorModel', 'windingSpeed', 'windingTension',
+  'coreThickness', 'coreDiameter', 'operatorName'
+];
 
 @Injectable()
 export class WindingService {
@@ -31,24 +37,16 @@ export class WindingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.separatorModel = dto.separatorModel;
-      existing.windingSpeed = dto.windingSpeed;
-      existing.windingTension = dto.windingTension;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, WINDING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      separatorModel: dto.separatorModel,
-      windingSpeed: dto.windingSpeed,
-      windingTension: dto.windingTension,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, WINDING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 
@@ -59,6 +57,10 @@ export class WindingService {
     if (!record) {
       throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到卷绕草稿记录' });
     }
+    
+    // Merge potential extra fields during quality submission as well
+    mergeExtraData(record, dto, WINDING_ENTITY_FIELDS);
+
     if (!record.equipmentCode || !record.separatorModel || !record.windingSpeed || !record.windingTension || !record.operatorName) {
       throw new BadRequestException({
         code: 'PROCESS_FIELDS_INCOMPLETE',
@@ -66,8 +68,6 @@ export class WindingService {
       });
     }
 
-    record.coreThickness = dto.coreThickness;
-    record.coreDiameter = dto.coreDiameter;
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);

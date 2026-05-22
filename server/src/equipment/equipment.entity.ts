@@ -8,27 +8,27 @@ import {
 
 @Entity('sys_equipment')
 export class Equipment {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ length: 50, unique: true })
+  @Column({ name: 'equipment_code', length: 50, unique: true })
   equipmentCode: string;
 
-  @Column({ length: 100 })
+  @Column({ name: 'equipment_name', length: 100 })
   equipmentName: string;
 
-  @Column({ type: 'nvarchar', length: 50, nullable: true })
+  @Column({ name: 'model', type: 'nvarchar', length: 50, nullable: true })
   model: string | null;
 
-  @Column({ type: 'nvarchar', length: 50, nullable: true })
+  @Column({ name: 'department_code', type: 'nvarchar', length: 50, nullable: true })
   departmentCode: string | null;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean = true;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

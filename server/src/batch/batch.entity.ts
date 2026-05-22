@@ -15,42 +15,42 @@ export enum BatchStatus {
 
 @Entity('batch')
 export class Batch {
-  @PrimaryColumn({ length: 16 })
+  @PrimaryColumn({ name: 'batch_no', length: 16 })
   batchNo: string;
 
-  @Column({ length: 128 })
+  @Column({ name: 'product_model', length: 128 })
   productModel: string;
 
-  @Column({ type: 'nvarchar', length: 128, nullable: true })
+  @Column({ name: 'product_spec', type: 'nvarchar', length: 128, nullable: true })
   productSpec: string | null;
 
-  @Column({ length: 64 })
+  @Column({ name: 'workshop', length: 64 })
   workshop: string;
 
-  @Column({ length: 32 })
+  @Column({ name: 'shift', length: 32 })
   shift: string;
 
-  @Column({ type: 'int' })
+  @Column({ name: 'planned_qty', type: 'int' })
   plannedQty: number;
 
-  @Column({ type: 'date' })
+  @Column({ name: 'actual_start_date', type: 'date' })
   actualStartDate: Date;
 
-  @Column({ type: 'tinyint', default: BatchStatus.DRAFT })
+  @Column({ name: 'status', type: 'tinyint', default: BatchStatus.DRAFT })
   status: number = BatchStatus.DRAFT;
 
-  @Column({ type: 'nvarchar', length: 500, nullable: true })
+  @Column({ name: 'remarks', type: 'nvarchar', length: 500, nullable: true })
   remarks: string | null;
 
-  @Column({ type: 'int' })
+  @Column({ name: 'created_by', type: 'int' })
   createdBy: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'updated_by', type: 'int', nullable: true })
   updatedBy: number | null;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date | null;
 }

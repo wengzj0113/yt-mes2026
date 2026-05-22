@@ -19,7 +19,7 @@
         <el-tab-pane label="工序数据" name="processes">
           <el-row :gutter="16">
             <el-col :span="6" v-for="proc in processes" :key="proc.route">
-              <el-card shadow="hover" class="proc-card" @click="navigate(proc.route)">
+              <el-card shadow="hover" class="proc-card" @click="navigate(proc.route, proc.processName)">
                 <h4>{{ proc.processName }}</h4>
                 <el-tag :type="statusTag(proc.status)" size="small">{{ statusText(proc.status) }}</el-tag>
                 <p v-if="proc.updatedAt" class="proc-time">{{ formatTime(proc.updatedAt) }}</p>
@@ -83,16 +83,46 @@
         <el-button type="primary" @click="goCellTraceByBatch">电芯追溯</el-button>
       </el-space>
     </el-card>
+
+    <el-drawer
+      v-model="drawerVisible"
+      :title="drawerTitle"
+      size="600px"
+      destroy-on-close
+    >
+      <component
+        :is="currentComponent"
+        :batchNo="batch?.batchNo"
+        @close="closeDrawer"
+      />
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { batchApi, type ProcessStatusItem } from '@/api/batch'
 import { cellApi, type CellBarcodeRecord } from '@/api/cells'
 import { statusLogApi, type BatchStatusLogItem } from '@/api/status-log'
 import type { BatchDto } from '@/types/api'
+
+// Import components for drawer
+import BatchingPage from '../processes/BatchingPage.vue'
+import CoatingPage from '../processes/CoatingPage.vue'
+import RollerPressingPage from '../processes/RollerPressingPage.vue'
+import SlittingPage from '../processes/SlittingPage.vue'
+import ElectrodePage from '../processes/ElectrodePage.vue'
+import WindingPage from '../processes/WindingPage.vue'
+import AssemblyPage from '../processes/AssemblyPage.vue'
+import BakingPage from '../processes/BakingPage.vue'
+import InjectionPage from '../processes/InjectionPage.vue'
+import WrappingPage from '../processes/WrappingPage.vue'
+import FormationPage from '../processes/FormationPage.vue'
+import GradingPage from '../processes/GradingPage.vue'
+import SortingPage from '../processes/SortingPage.vue'
+import QualityCheckPage from '../quality/QualityCheckPage.vue'
+import MaterialWarehousePage from '../material/MaterialWarehousePage.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,6 +130,29 @@ const batch = ref<BatchDto | null>(null)
 const processes = ref<ProcessStatusItem[]>([])
 const statusLogs = ref<BatchStatusLogItem[]>([])
 const activeTab = ref('processes')
+
+// Drawer state
+const drawerVisible = ref(false)
+const drawerTitle = ref('')
+const currentComponent = shallowRef<any>(null)
+
+const componentMap: Record<string, any> = {
+  'batching': BatchingPage,
+  'coating': CoatingPage,
+  'roller-pressing': RollerPressingPage,
+  'slitting': SlittingPage,
+  'electrode': ElectrodePage,
+  'winding': WindingPage,
+  'assembly': AssemblyPage,
+  'baking': BakingPage,
+  'injection': InjectionPage,
+  'wrapping': WrappingPage,
+  'formation': FormationPage,
+  'grading': GradingPage,
+  'sorting': SortingPage,
+  'quality': QualityCheckPage,
+  'materials': MaterialWarehousePage
+}
 
 // Cell list state
 const cellList = ref<CellBarcodeRecord[]>([])
@@ -120,12 +173,26 @@ function formatTime(iso: string): string {
   return iso ? iso.slice(0, 16).replace('T', ' ') : ''
 }
 
-function navigate(path: string) {
+function navigate(path: string, name?: string) {
   const batchNo = batch.value?.batchNo
   if (!batchNo) return
-  if (path === 'quality') router.push(`/quality/${batchNo}`)
-  else if (path === 'materials') router.push(`/materials/${batchNo}`)
-  else router.push(`/processes/${batchNo}/${path}`)
+  
+  const component = componentMap[path]
+  if (component) {
+    currentComponent.value = component
+    drawerTitle.value = name || (path === 'quality' ? '质量检验' : path === 'materials' ? '材料仓库' : '工序录入')
+    drawerVisible.value = true
+  } else {
+    // Fallback for paths not in map (if any)
+    if (path === 'quality') router.push(`/quality/${batchNo}`)
+    else if (path === 'materials') router.push(`/materials/${batchNo}`)
+    else router.push(`/processes/${batchNo}/${path}`)
+  }
+}
+
+async function closeDrawer() {
+  drawerVisible.value = false
+  await loadData() // Refresh process status
 }
 
 function goImportBarcode() {

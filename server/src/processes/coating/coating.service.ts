@@ -5,6 +5,12 @@ import { CoatingRecord } from './coating-record.entity';
 import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateCoatingDraftDto } from './dto/create-draft.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const COATING_ENTITY_FIELDS = [
+  'equipmentCode', 'coatingSpeed', 'coatingThicknessPos', 'coatingThicknessNeg',
+  'arealDensityPos', 'arealDensityNeg', 'coatingTemperature', 'operatorName'
+];
 
 @Injectable()
 export class CoatingService {
@@ -30,30 +36,16 @@ export class CoatingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.coatingSpeed = dto.coatingSpeed;
-      existing.coatingThicknessPos = dto.coatingThicknessPos;
-      existing.coatingThicknessNeg = dto.coatingThicknessNeg;
-      existing.arealDensityPos = dto.arealDensityPos;
-      existing.arealDensityNeg = dto.arealDensityNeg;
-      existing.coatingTemperature = dto.coatingTemperature;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, COATING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      coatingSpeed: dto.coatingSpeed,
-      coatingThicknessPos: dto.coatingThicknessPos,
-      coatingThicknessNeg: dto.coatingThicknessNeg,
-      arealDensityPos: dto.arealDensityPos,
-      arealDensityNeg: dto.arealDensityNeg,
-      coatingTemperature: dto.coatingTemperature,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, COATING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 

@@ -17,37 +17,37 @@ export enum UserRole {
 
 @Entity('sys_user')
 export class User {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ length: 50, unique: true })
+  @Column({ name: 'username', length: 50, unique: true })
   username: string;
 
   @Exclude()
-  @Column({ length: 255 })
+  @Column({ name: 'password', length: 255 })
   password: string;
 
-  @Column({ length: 50 })
+  @Column({ name: 'real_name', length: 50 })
   realName: string;
 
-  @Column({ type: 'int', default: UserRole.OPERATOR })
+  @Column({ name: 'role_code', type: 'int', default: UserRole.OPERATOR })
   roleCode: number = UserRole.OPERATOR;
 
-  @Column({ type: 'nvarchar', length: 20, nullable: true })
+  @Column({ name: 'phone', type: 'nvarchar', length: 20, nullable: true })
   phone: string | null;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean = true;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ name: 'login_attempts', type: 'int', default: 0 })
   loginAttempts: number = 0;
 
-  @Column({ type: 'datetime2', nullable: true })
+  @Column({ name: 'locked_until', type: 'datetime2', nullable: true })
   lockedUntil: Date | null = null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

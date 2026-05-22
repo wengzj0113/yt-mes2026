@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { BatchingRecord } from './batching-record.entity';
 import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateBatchingDraftDto } from './dto/create-draft.dto';
 import { SubmitBatchingQualityDto } from './dto/submit-quality.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const BATCHING_ENTITY_FIELDS = [
+  'positiveMaterial', 'negativeMaterial', 'viscosityRecord', 'operatorName'
+];
 
 @Injectable()
 export class BatchingService {
@@ -16,6 +21,7 @@ export class BatchingService {
     private readonly batchRepo: Repository<Batch>,
     @InjectRepository(QualityCheck)
     private readonly qualityCheckRepo: Repository<QualityCheck>,
+    private readonly dataSource: DataSource,
   ) {}
 
   private async validateBatch(batchNo: string) {
@@ -31,56 +37,55 @@ export class BatchingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      // Update existing draft
-      existing.positiveMaterial = dto.positiveMaterial;
-      existing.negativeMaterial = dto.negativeMaterial;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, BATCHING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      positiveMaterial: dto.positiveMaterial,
-      negativeMaterial: dto.negativeMaterial,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, BATCHING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 
   async submitQuality(dto: SubmitBatchingQualityDto, userId: number): Promise<BatchingRecord> {
     await this.validateBatch(dto.batchNo);
 
-    const record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
-    if (!record) {
-      throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到配料草稿记录' });
-    }
-    // Verify operator fields are filled
-    if (!record.positiveMaterial || !record.negativeMaterial || !record.operatorName) {
-      throw new BadRequestException({
-        code: 'PROCESS_FIELDS_INCOMPLETE',
-        message: '操作员字段未填写完整，请先保存草稿',
-      });
-    }
+    return this.dataSource.transaction(async (manager) => {
+      const record = await manager.findOne(BatchingRecord, { where: { batchNo: dto.batchNo } });
+      if (!record) {
+        throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到配料草稿记录' });
+      }
+      
+      mergeExtraData(record, dto, BATCHING_ENTITY_FIELDS);
 
-    record.viscosityRecord = dto.viscosityRecord;
-    record.isDraft = false;
-    record.updatedBy = userId;
-    const saved = await this.repo.save(record);
+      // Verify operator fields are filled
+      if (!record.positiveMaterial || !record.negativeMaterial || !record.operatorName) {
+        throw new BadRequestException({
+          code: 'PROCESS_FIELDS_INCOMPLETE',
+          message: '操作员字段未填写完整，请先保存草稿',
+        });
+      }
 
-    // 同步创建质量检验记录
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo: dto.batchNo,
-        processType: 'batching',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
+      record.isDraft = false;
+      record.updatedBy = userId;
+      const saved = await manager.save(record);
 
-    return saved;
+      // 同步创建质量检验记录
+      await manager.save(
+        manager.create(QualityCheck, {
+          batchNo: dto.batchNo,
+          processType: 'batching',
+          inspectionResult: 1,
+          inspectorName: record.operatorName,
+          createdBy: userId,
+        }),
+      );
+
+      return saved;
+    });
   }
 
   async findByBatchNo(batchNo: string): Promise<BatchingRecord | null> {

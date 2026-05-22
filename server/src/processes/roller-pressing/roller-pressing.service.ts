@@ -5,6 +5,11 @@ import { RollerPressingRecord } from './roller-pressing-record.entity';
 import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateRollerPressingDraftDto } from './dto/create-draft.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const ROLLER_PRESSING_ENTITY_FIELDS = [
+  'equipmentCode', 'rollerPressure', 'rollerThickness', 'rollerSpeed', 'operatorName'
+];
 
 @Injectable()
 export class RollerPressingService {
@@ -30,24 +35,16 @@ export class RollerPressingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.rollerPressure = dto.rollerPressure;
-      existing.rollerThickness = dto.rollerThickness;
-      if (dto.rollerSpeed !== undefined) existing.rollerSpeed = dto.rollerSpeed;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, ROLLER_PRESSING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      rollerPressure: dto.rollerPressure,
-      rollerThickness: dto.rollerThickness,
-      rollerSpeed: dto.rollerSpeed,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, ROLLER_PRESSING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 

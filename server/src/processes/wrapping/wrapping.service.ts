@@ -6,6 +6,11 @@ import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateWrappingDraftDto } from './dto/create-draft.dto';
 import { SubmitWrappingQualityDto } from './dto/submit-quality.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const WRAPPING_ENTITY_FIELDS = [
+  'equipmentCode', 'filmModel', 'shrinkTemperature', 'appearanceCheck', 'operatorName'
+];
 
 @Injectable()
 export class WrappingService {
@@ -31,22 +36,16 @@ export class WrappingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.filmModel = dto.filmModel;
-      existing.shrinkTemperature = dto.shrinkTemperature;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, WRAPPING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      filmModel: dto.filmModel,
-      shrinkTemperature: dto.shrinkTemperature,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, WRAPPING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 
@@ -57,6 +56,9 @@ export class WrappingService {
     if (!record) {
       throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到包膜草稿记录' });
     }
+
+    mergeExtraData(record, dto, WRAPPING_ENTITY_FIELDS);
+
     if (!record.equipmentCode || !record.filmModel || !record.shrinkTemperature || !record.operatorName) {
       throw new BadRequestException({
         code: 'PROCESS_FIELDS_INCOMPLETE',
@@ -64,7 +66,6 @@ export class WrappingService {
       });
     }
 
-    record.appearanceCheck = dto.appearanceCheck;
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);

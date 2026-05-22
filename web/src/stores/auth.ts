@@ -8,14 +8,34 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<{ sub: number; username: string; roleCode?: number } | null>(null)
   const isLoggedIn = computed(() => !!token.value)
 
+  function decodeToken(token: string) {
+    try {
+      const base64Url = token.split('.')[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(
+        window.atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      )
+      return JSON.parse(jsonPayload)
+    } catch (e) {
+      console.error('Failed to decode JWT token:', e)
+      return null
+    }
+  }
+
   async function login(username: string, password: string) {
     const res = await loginApi.login({ username, password })
     token.value = res.data.accessToken
     refreshToken.value = res.data.refreshToken
     localStorage.setItem('token', res.data.accessToken)
     localStorage.setItem('refreshToken', res.data.refreshToken)
-    const payload = JSON.parse(atob(res.data.accessToken.split('.')[1]))
-    user.value = { sub: payload.sub, username: payload.username, roleCode: payload.roleCode }
+    
+    const payload = decodeToken(res.data.accessToken)
+    if (payload) {
+      user.value = { sub: payload.sub, username: payload.username, roleCode: payload.roleCode }
+    }
   }
 
   function logout() {

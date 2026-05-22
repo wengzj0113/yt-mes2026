@@ -6,6 +6,12 @@ import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateBakingDraftDto } from './dto/create-draft.dto';
 import { SubmitBakingQualityDto } from './dto/submit-quality.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const BAKING_ENTITY_FIELDS = [
+  'equipmentCode', 'bakingTemperature', 'bakingDuration', 'vacuumLevel',
+  'moistureAfterBaking', 'operatorName'
+];
 
 @Injectable()
 export class BakingService {
@@ -31,22 +37,16 @@ export class BakingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.bakingTemperature = dto.bakingTemperature;
-      existing.bakingDuration = dto.bakingDuration;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, BAKING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      bakingTemperature: dto.bakingTemperature,
-      bakingDuration: dto.bakingDuration,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, BAKING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 
@@ -57,6 +57,9 @@ export class BakingService {
     if (!record) {
       throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到烘烤草稿记录' });
     }
+
+    mergeExtraData(record, dto, BAKING_ENTITY_FIELDS);
+
     if (!record.equipmentCode || !record.bakingTemperature || !record.bakingDuration || !record.operatorName) {
       throw new BadRequestException({
         code: 'PROCESS_FIELDS_INCOMPLETE',
@@ -64,8 +67,6 @@ export class BakingService {
       });
     }
 
-    record.vacuumLevel = dto.vacuumLevel;
-    record.moistureAfterBaking = dto.moistureAfterBaking;
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);

@@ -25,7 +25,6 @@ const router = createRouter({
         { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/IndexPage.vue') },
         { path: 'batches', name: 'BatchList', component: () => import('@/views/batch/BatchListPage.vue') },
         { path: 'batches/:batchNo', name: 'BatchDetail', component: () => import('@/views/batch/BatchDetailPage.vue') },
-        { path: 'processes', name: 'ProcessDictionary', component: () => import('@/views/master-data/ProcessDictionaryPage.vue') },
         { path: 'process-hub', name: 'ProcessHub', component: () => import('@/views/processes/ProcessHubPage.vue') },
         { path: 'processes/:batchNo/batching', name: 'Batching', component: () => import('@/views/processes/BatchingPage.vue') },
         { path: 'processes/:batchNo/coating', name: 'Coating', component: () => import('@/views/processes/CoatingPage.vue') },
@@ -43,8 +42,10 @@ const router = createRouter({
         { path: 'quality/:batchNo', name: 'QualityCheck', component: () => import('@/views/quality/QualityCheckPage.vue') },
         { path: 'materials/:batchNo', name: 'MaterialWarehouse', component: () => import('@/views/material/MaterialWarehousePage.vue') },
         { path: 'trace', name: 'CellTrace', component: () => import('@/views/cells/CellTracePage.vue') },
+        { path: 'pack-entry', name: 'PackEntry', component: () => import('@/views/packs/PackEntryPage.vue') },
 
         // System Management
+        { path: 'system/processes', name: 'ProcessDictionary', component: () => import('@/views/master-data/ProcessDictionaryPage.vue') },
         { path: 'system/users', name: 'UserList', component: () => import('@/views/system/UserListPage.vue') },
         { path: 'system/roles', name: 'RoleList', component: () => import('@/views/system/RoleListPage.vue') },
         { path: 'system/departments', name: 'DepartmentList', component: () => import('@/views/system/DepartmentListPage.vue') },

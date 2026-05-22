@@ -6,6 +6,12 @@ import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateInjectionDraftDto } from './dto/create-draft.dto';
 import { SubmitInjectionQualityDto } from './dto/submit-quality.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const INJECTION_ENTITY_FIELDS = [
+  'equipmentCode', 'electrolyteModel', 'injectionAmount', 'injectionHumidity',
+  'injectionTemperature', 'sealingDimension', 'cleaningRecord', 'operatorName'
+];
 
 @Injectable()
 export class InjectionService {
@@ -31,20 +37,16 @@ export class InjectionService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.electrolyteModel = dto.electrolyteModel;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, INJECTION_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      electrolyteModel: dto.electrolyteModel,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, INJECTION_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 
@@ -55,6 +57,9 @@ export class InjectionService {
     if (!record) {
       throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到注液草稿记录' });
     }
+
+    mergeExtraData(record, dto, INJECTION_ENTITY_FIELDS);
+
     if (!record.equipmentCode || !record.electrolyteModel || !record.operatorName) {
       throw new BadRequestException({
         code: 'PROCESS_FIELDS_INCOMPLETE',
@@ -62,11 +67,6 @@ export class InjectionService {
       });
     }
 
-    record.injectionAmount = dto.injectionAmount;
-    record.injectionHumidity = dto.injectionHumidity;
-    record.injectionTemperature = dto.injectionTemperature;
-    record.sealingDimension = dto.sealingDimension;
-    record.cleaningRecord = dto.cleaningRecord;
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);

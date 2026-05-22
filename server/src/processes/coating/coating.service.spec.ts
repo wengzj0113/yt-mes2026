@@ -30,7 +30,8 @@ describe('CoatingService', () => {
     createdAt: new Date(),
     updatedBy: null,
     updatedAt: null,
-  };
+      extraData: '',
+    };
 
   const mockBatch = {
     batchNo: 'WT26A01MA',

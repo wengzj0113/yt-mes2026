@@ -4,43 +4,48 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('batching_record')
 export class BatchingRecord {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ length: 16 })
+  @Index()
+  @Column({ name: 'batch_no', length: 16 })
   batchNo: string;
 
-  @Column({ type: 'tinyint', default: 1 })
+  @Column({ name: 'record_status', type: 'tinyint', default: 1 })
   recordStatus: number = 1;
 
-  @Column({ default: true })
+  @Column({ name: 'is_draft', default: true })
   isDraft: boolean = true;
 
-  @Column({ length: 128 })
+  @Column({ name: 'positive_material', length: 128 })
   positiveMaterial: string;
 
-  @Column({ length: 128 })
+  @Column({ name: 'negative_material', length: 128 })
   negativeMaterial: string;
 
-  @Column({ type: 'nvarchar', length: 256, nullable: true })
+  @Column({ name: 'viscosity_record', type: 'nvarchar', length: 256, nullable: true })
   viscosityRecord: string | null;
 
-  @Column({ length: 32 })
+  @Column({ name: 'operator_name', length: 32 })
   operatorName: string;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true, name: 'extra_data' })
+  extraData: string;
+
+  @Column({ name: 'created_by', type: 'int' })
   createdBy: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'updated_by', type: 'int', nullable: true })
   updatedBy: number | null;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date | null;
 }

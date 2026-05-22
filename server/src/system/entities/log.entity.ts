@@ -2,25 +2,25 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeor
 
 @Entity('sys_log')
 export class SystemLog {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
   @Column({ name: 'user_id' })
   userId: number;
 
-  @Column()
+  @Column({ name: 'username' })
   username: string;
 
-  @Column()
+  @Column({ name: 'action' })
   action: string;
 
-  @Column()
+  @Column({ name: 'module' })
   module: string;
 
-  @Column({ type: 'nvarchar', length: 'max', nullable: true })
+  @Column({ name: 'detail', type: 'nvarchar', length: 'max', nullable: true })
   detail: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'ip', nullable: true })
   ip: string;
 
   @CreateDateColumn({ name: 'created_at' })

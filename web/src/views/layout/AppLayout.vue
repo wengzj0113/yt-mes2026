@@ -21,10 +21,6 @@
           <el-menu-item index="/batches">
             <el-icon><List /></el-icon><span>批次管理</span>
           </el-menu-item>
-          <el-menu-item index="/processes">
-            <el-icon><Setting /></el-icon>
-            <span>工序管理</span>
-          </el-menu-item>
           <el-menu-item index="/process-hub">
             <el-icon><Monitor /></el-icon>
             <span>现场扫码录入</span>
@@ -32,8 +28,14 @@
           <el-menu-item index="/trace">
             <el-icon><Coin /></el-icon><span>电芯追溯</span>
           </el-menu-item>
+          <el-menu-item index="/pack-entry">
+            <el-icon><Box /></el-icon><span>Pack 录入</span>
+          </el-menu-item>
           <el-sub-menu index="system">
             <template #title><el-icon><Setting /></el-icon><span>系统管理</span></template>
+            <el-menu-item index="/system/processes">
+              <el-icon><List /></el-icon><span>工序主数据</span>
+            </el-menu-item>
             <el-menu-item index="/system/users">
               <el-icon><User /></el-icon><span>用户管理</span>
             </el-menu-item>
@@ -79,7 +81,7 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { HomeFilled, List, Setting, Coin, User, UserFilled, OfficeBuilding, Monitor, Document, Tools, DataLine } from '@element-plus/icons-vue'
+import { HomeFilled, List, Setting, Coin, User, UserFilled, OfficeBuilding, Monitor, Document, Tools, DataLine, Box } from '@element-plus/icons-vue'
 
 const authStore = useAuthStore()
 const router = useRouter()

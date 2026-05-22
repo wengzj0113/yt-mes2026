@@ -1,310 +1,437 @@
 <template>
-  <div class="trace-page">
-    <!-- ===== Compact Search Bar ===== -->
-    <section class="search-bar">
-      <div class="search-bar__modes">
-        <button
-          class="search-bar__mode"
-          :class="{ active: mode === 'barcode' }"
-          @click="switchMode('barcode')"
-        >
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="3" height="16" rx="1"/><rect x="7" y="4" width="2" height="16" rx="1"/><rect x="11" y="4" width="2" height="16" rx="1"/><rect x="15" y="4" width="2" height="16" rx="1"/><rect x="19" y="4" width="3" height="16" rx="1"/></svg>
-          电芯追溯
-        </button>
-        <button
-          class="search-bar__mode"
-          :class="{ active: mode === 'batch' }"
-          @click="switchMode('batch')"
-        >
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
-          批次追溯
-        </button>
-      </div>
-      <div class="search-bar__input-wrap">
-        <el-input
-          v-if="mode === 'barcode'"
-          v-model="barcode"
-          placeholder="扫描或输入电芯条码"
-          clearable
-          size="large"
-          @keyup.enter="handleTrace"
-        >
-          <template #prefix>
-            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#909399" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          </template>
-        </el-input>
-        <el-select
-          v-else
-          v-model="batchQuery"
-          filterable
-          remote
-          allow-create
-          default-first-option
-          reserve-keyword
-          placeholder="输入批次号进行搜索或选择"
-          :remote-method="searchBatches"
-          :loading="batchSearchLoading"
-          clearable
-          size="large"
-          style="width: 100%"
-          @change="handleTrace"
-        >
-          <template #prefix>
-            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#909399" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          </template>
-          <el-option
-            v-for="item in batchOptions"
-            :key="item.batchNo"
-            :label="item.batchNo"
-            :value="item.batchNo"
+  <div class="trace-page" :class="{ 'is-searched': hasSearched }">
+    <!-- ===== Minimalist Search Interface ===== -->
+    <section class="search-container">
+      <div class="search-box">
+        <h1 v-if="!hasSearched" class="search-box__title">生产追溯中心</h1>
+        
+        <div class="search-box__tabs">
+          <button 
+            v-for="m in ['barcode', 'batch', 'pack']" 
+            :key="m"
+            class="search-tab"
+            :class="{ active: mode === m }"
+            @click="switchMode(m as any)"
           >
-            <span style="float: left">{{ item.batchNo }}</span>
-            <span style="float: right; color: #8492a6; font-size: 13px">{{ item.productModel }}</span>
-          </el-option>
-        </el-select>
-        <el-button type="primary" size="large" :loading="tracing" @click="handleTrace" class="search-bar__btn">
-          追溯查询
-        </el-button>
+            {{ m === 'barcode' ? '电芯' : m === 'batch' ? '批次' : 'Pack' }}
+          </button>
+        </div>
+
+        <div class="search-box__input-group">
+          <el-input
+            v-model="queryValue"
+            :placeholder="placeholderText"
+            clearable
+            class="apple-input"
+            @keyup.enter="handleTrace"
+          >
+            <template #prefix>
+              <el-icon :size="20"><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button 
+            type="primary" 
+            class="apple-button" 
+            :loading="tracing" 
+            @click="handleTrace"
+          >
+            查询
+          </el-button>
+        </div>
+
+        <!-- Recent Searches (Only in Idle Mode) -->
+        <div v-if="!hasSearched && recentSearches.length > 0" class="recent-searches">
+          <div class="recent-searches__header">
+            <span>最近查询</span>
+            <el-button link type="info" size="small" @click="clearHistory">清空</el-button>
+          </div>
+          <div class="recent-searches__tags">
+            <el-tag
+              v-for="(item, idx) in recentSearches"
+              :key="idx"
+              closable
+              round
+              effect="plain"
+              class="recent-tag"
+              @click="redoSearch(item)"
+              @close="removeHistoryItem(idx)"
+            >
+              {{ item.value }}
+            </el-tag>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- ===== Idle State ===== -->
-    <div v-if="!result && !batchResult && !notFound && !tracing" class="idle-state">
-      <div class="idle-state__graphic">
-        <svg aria-hidden="true" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#c0c4cc" stroke-width="1.2">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="M21 21l-4.35-4.35"/>
-          <path d="M8 11h6" stroke-dasharray="2 2"/>
-          <circle cx="11" cy="11" r="2" fill="#c0c4cc"/>
-        </svg>
+    <!-- ===== Results Content Area ===== -->
+    <div v-if="hasSearched" class="results-container">
+      <!-- Loading / Error States -->
+      <div v-if="tracing" class="loading-overlay">
+        <el-skeleton :rows="10" animated />
       </div>
-      <p class="idle-state__text">{{ hintText }}</p>
-      <p class="idle-state__sub">输入条码或批次号，一键追溯电芯全生命周期生产数据</p>
-    </div>
 
-    <!-- ===== Loading Skeleton ===== -->
-    <div v-if="tracing" class="loading-skeleton">
-      <div class="loading-skeleton__layout">
-        <div class="loading-skeleton__nav">
-          <div class="skeleton-block" style="height:36px;width:100%;margin-bottom:4px" />
-          <div class="skeleton-block" style="height:36px;width:100%;margin-bottom:4px" />
-          <div class="skeleton-block" style="height:36px;width:80%;margin-bottom:4px" />
-          <div class="skeleton-block" style="height:36px;width:90%;margin-bottom:4px" />
-        </div>
-        <div class="loading-skeleton__content">
-          <div class="skeleton-block" style="height:80px;width:100%;margin-bottom:16px" />
-          <div class="skeleton-block" style="height:48px;width:100%;margin-bottom:16px" />
-          <div class="skeleton-block" style="height:200px;width:100%" />
-        </div>
+      <div v-else-if="notFound" class="not-found-state">
+        <el-empty :description="notFoundMsg">
+          <el-button round @click="resetSearch">返回搜索</el-button>
+        </el-empty>
       </div>
-    </div>
 
-    <!-- ===== Error State ===== -->
-    <div v-if="notFound" class="error-state">
-      <div class="error-state__icon">
-        <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-      </div>
-      <p class="error-state__text">{{ notFoundMsg }}</p>
-      <el-button size="small" @click="resetSearch">重新搜索</el-button>
-    </div>
-
-    <!-- ===== Results ===== -->
-    <template v-if="result || batchResult">
-      <div class="trace-layout">
-        <!-- Left: Process Navigation -->
-        <aside class="process-nav">
-          <div class="process-nav__header">
-            <span class="process-nav__title">工序导航</span>
-          </div>
-          <div class="process-nav__list">
-            <div
-              v-for="(proc, idx) in processList"
-              :key="proc.key"
-              class="process-nav__item"
-              :class="[
-                `status-${proc.status}`,
-                { active: selectedProcess === proc.key }
-              ]"
-              @click="selectedProcess = proc.key"
-            >
-              <span class="process-nav__dot" :class="`dot-${proc.status}`">
-                <span v-if="proc.status === 'submitted'">&#10003;</span>
-                <span v-else-if="proc.status === 'draft'">&#9998;</span>
-                <span v-else-if="proc.status === 'voided'">&#10007;</span>
-                <span v-else>{{ idx + 1 }}</span>
-              </span>
-              <span class="process-nav__name">{{ proc.name }}</span>
-              <span class="process-nav__badge" :class="`badge-${proc.status}`">{{ stepLabel(proc) }}</span>
+      <!-- Result View -->
+      <main v-else-if="result || batchResult || packResult" class="result-view">
+        <!-- Pack Info Card (Minimalist) -->
+        <section v-if="mode === 'pack' && packResult" class="minimal-card pack-summary">
+          <div class="card-title">Pack 追溯摘要</div>
+          <div class="pack-grid">
+            <div class="pack-item">
+              <label>批次号</label>
+              <span class="highlight">{{ packResult.batchNo || '-' }}</span>
+            </div>
+            <div class="pack-item">
+              <label>Pack 条码</label>
+              <span>{{ packResult.packBarcode }}</span>
+            </div>
+            <div class="pack-item">
+              <label>保护板条码</label>
+              <span>{{ packResult.protectionBoardBarcode || '未绑定' }}</span>
+            </div>
+            <div class="pack-item">
+              <label>操作员</label>
+              <span>{{ packResult.operatorName || '系统' }}</span>
+            </div>
+            <div class="pack-item">
+              <label>电芯总数</label>
+              <span class="highlight">{{ packResult.cells?.length || 0 }} PCS</span>
+            </div>
+            <div class="pack-item">
+              <label>录入时间</label>
+              <span>{{ formatTime(packResult.createdAt) }}</span>
             </div>
           </div>
-          <div class="process-nav__summary">
-            <div class="process-nav__progress-track">
-              <div class="process-nav__progress-fill" :style="{ width: progressPercent + '%' }" />
-            </div>
-            <div class="process-nav__progress-text">
-              {{ statusSummary }}
-            </div>
-          </div>
-        </aside>
+        </section>
 
-        <!-- Right: Content -->
-        <main class="trace-content">
-          <!-- KPI Cards (barcode mode) -->
-          <div v-if="mode === 'barcode' && result" class="kpi-cards">
-            <div class="kpi-card">
-              <div class="kpi-card__value">{{ result.cell.voltage?.toFixed(3) }}</div>
-              <div class="kpi-card__label">电压 (V)</div>
-              <div class="kpi-card__status kpi-ok">正常</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-card__value">{{ result.cell.internalResistance }}</div>
-              <div class="kpi-card__label">内阻 (mΩ)</div>
-              <div class="kpi-card__status kpi-ok">正常</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-card__value">{{ result.cell.capacity }}</div>
-              <div class="kpi-card__label">容量 (mAh)</div>
-              <div class="kpi-card__status kpi-ok">正常</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-card__value">{{ result.cell.grade || '-' }}<span class="kpi-card__unit">级</span></div>
-              <div class="kpi-card__label">等级</div>
-              <div class="kpi-card__status" :class="grade === 'A' ? 'kpi-ok' : grade === 'B' ? 'kpi-warn' : 'kpi-err'">
-                {{ grade === 'A' ? '优质' : grade === 'B' ? '合格' : '待定' }}
-              </div>
-            </div>
+        <!-- Cell/Batch Info KPI Row -->
+        <section v-if="mode !== 'pack'" class="kpi-row">
+          <div v-if="mode === 'barcode' && result" class="kpi-item grade-kpi">
+            <div class="kpi-item__val large-grade" :class="`grade-${result.cell.grade}`">{{ result.cell.grade || '?' }}</div>
+            <div class="kpi-item__lab">品质等级</div>
           </div>
+          <div v-if="mode === 'barcode' && result" class="kpi-item">
+            <div class="kpi-item__val">{{ result.cell.voltage?.toFixed(3) }}<small>V</small></div>
+            <div class="kpi-item__lab">实时电压</div>
+          </div>
+          <div v-if="mode === 'barcode' && result" class="kpi-item">
+            <div class="kpi-item__val">{{ result.cell.internalResistance }}<small>mΩ</small></div>
+            <div class="kpi-item__lab">内阻</div>
+          </div>
+          <div v-if="mode === 'barcode' && result" class="kpi-item">
+            <div class="kpi-item__val">{{ result.cell.capacity }}<small>mAh</small></div>
+            <div class="kpi-item__lab">放电容量</div>
+          </div>
+          <!-- Batch Mode KPI -->
+          <div v-if="mode === 'batch' && batchInfo" class="kpi-item">
+            <div class="kpi-item__val">{{ batchInfo.batchNo }}</div>
+            <div class="kpi-item__lab">批次号</div>
+          </div>
+          <div v-if="mode === 'batch' && batchInfo" class="kpi-item">
+            <div class="kpi-item__val">{{ batchInfo.productModel }}</div>
+            <div class="kpi-item__lab">产品型号</div>
+          </div>
+          <div v-if="mode === 'batch' && batchInfo" class="kpi-item">
+            <div class="kpi-item__val">{{ cellTotal }}</div>
+            <div class="kpi-item__lab">已录入电芯</div>
+          </div>
+        </section>
 
-          <!-- Barcode display -->
-          <div v-if="mode === 'barcode' && result" class="barcode-display">
-            <span class="barcode-display__label">电芯条码</span>
-            <span class="barcode-display__value">{{ result.cell.barcode }}</span>
-            <span class="barcode-display__source">{{ result.cell.importSource }}</span>
+        <div v-if="mode === 'barcode' && result" class="barcode-passport">
+          <div class="passport-header">
+            <h2 class="passport-title">电芯生产档案 (SN: {{ result.cell.barcode }})</h2>
+            <div class="passport-meta">所属批次: {{ result.cell.batchNo }} | 追溯时间: {{ formatTime(new Date().toISOString()) }}</div>
           </div>
 
-          <!-- Compact Pipeline Bar -->
-          <div v-if="mode === 'barcode' && result" class="pipeline-bar">
-            <div class="pipeline-bar__inner">
-              <div
-                v-for="(proc, idx) in processList"
-                :key="proc.key"
-                class="pipeline-bar__node"
-                :class="`pipeline-${proc.status}`"
-                :title="proc.name"
-                @click="selectedProcess = proc.key"
+          <div class="passport-body">
+            <!-- Process Cards Flow -->
+            <div class="process-cards-grid">
+              <div 
+                v-for="proc in processList.filter(p => p.status !== 'not_entered')" 
+                :key="proc.key" 
+                class="minimal-card process-detail-card"
               >
-                <div class="pipeline-bar__dot" :class="{ 'is-active': selectedProcess === proc.key }" />
-                <div v-if="idx < processList.length - 1" class="pipeline-bar__connector" :class="`conn-${proc.status}`" />
-              </div>
-            </div>
-            <div class="pipeline-bar__labels">
-              <span v-for="proc in processList" :key="proc.key" class="pipeline-bar__label">{{ proc.name }}</span>
-            </div>
-          </div>
-
-          <!-- Batch Info Card -->
-          <div v-if="batchInfo" class="info-card">
-            <div class="info-card__header">
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e88e5" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
-              <span>批次信息</span>
-              <el-tag :type="batchStatusType" size="small" effect="dark" class="info-card__tag">{{ batchStatusText }}</el-tag>
-            </div>
-            <div class="info-card__body">
-              <div class="info-card__grid">
-                <div class="info-card__item">
-                  <span class="info-card__label">批次号</span>
-                  <span class="info-card__value info-card__link" tabindex="0" role="button" @click="goBatchDetail(batchInfo.batchNo)" @keydown.enter.prevent="goBatchDetail(batchInfo.batchNo)">{{ batchInfo.batchNo }}</span>
+                <div class="card-header">
+                  <div class="header-left">
+                    <span class="step-num">{{ PROCESS_ORDER.findIndex(x => x.key === proc.key) + 1 }}</span>
+                    <span class="step-name">{{ proc.name }}</span>
+                  </div>
+                  <el-tag size="small" :type="stepTag(proc)" round>{{ stepLabel(proc) }}</el-tag>
                 </div>
-                <div class="info-card__item">
-                  <span class="info-card__label">产品型号</span>
-                  <span class="info-card__value">{{ batchInfo.productModel }}</span>
+                <div class="process-params">
+                  <div v-for="field in getProcessFields(proc)" :key="field.key" class="param-item">
+                    <label>{{ field.label }}</label>
+                    <span>{{ field.value }}</span>
+                  </div>
                 </div>
-                <div class="info-card__item">
-                  <span class="info-card__label">产品规格</span>
-                  <span class="info-card__value">{{ batchInfo.productSpec }}</span>
-                </div>
-                <div class="info-card__item">
-                  <span class="info-card__label">计划数量</span>
-                  <span class="info-card__value">{{ batchInfo.plannedQty }}</span>
-                </div>
-                <div class="info-card__item">
-                  <span class="info-card__label">创建时间</span>
-                  <span class="info-card__value">{{ formatTime(batchInfo.createdAt) }}</span>
+                <div class="process-footer">
+                  <span>操作员: {{ proc.record.operatorName || '系统' }}</span>
+                  <span class="footer-time">{{ formatTimeShort(proc.record.createdAt) }}</span>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Process Detail -->
-          <div v-if="selectedRecord" class="detail-panel">
-            <div class="detail-panel__header">
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e24aa" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              <span>{{ selectedProcessName }}</span>
-              <el-tag :type="stepTag(selectedProcInfo!)" size="small" effect="dark">{{ stepLabel(selectedProcInfo!) }}</el-tag>
-            </div>
-            <div class="detail-panel__body">
-              <div class="detail-group" v-for="(group, gIdx) in groupedFields" :key="gIdx">
-                <div class="detail-group__title">{{ group.title }}</div>
-                <div class="detail-group__grid">
-                  <div v-for="item in group.fields" :key="item.key" class="detail-group__field">
-                    <span class="detail-group__label">{{ item.label }}</span>
-                    <span class="detail-group__value">{{ item.value }}</span>
+            <!-- Raw Material Trace Section -->
+            <section class="minimal-card material-trace-card">
+              <div class="card-header">
+                <span class="card-header__title">原材料批次追溯</span>
+              </div>
+              <div class="material-grid">
+                <div v-for="mat in materialList" :key="mat.label" class="material-item">
+                  <div class="mat-icon"><el-icon><Coin /></el-icon></div>
+                  <div class="mat-info">
+                    <label>{{ mat.label }}</label>
+                    <span class="barcode-font">{{ mat.value }}</span>
                   </div>
                 </div>
               </div>
-            </div>
+              <div v-if="materialList.length === 0" class="empty-materials">
+                暂无原材料绑定记录
+              </div>
+            </section>
           </div>
-          <div v-else-if="processList.length > 0" class="detail-panel hint-panel">
-            <div class="hint-panel__body">
-              <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c0c4cc" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-              <span>点击工序节点查看详细数据</span>
-            </div>
+        </div>
+
+        <div v-else class="main-layout" :class="{ 'is-pack-mode': mode === 'pack' }">
+          <!-- Left Side: Process List (Cell/Batch) OR Cell List (Pack) -->
+          <div class="process-section">
+            <template v-if="mode === 'pack' && packResult">
+              <div class="section-title">包含电芯列表</div>
+              <div class="cell-list-container">
+                <el-table 
+                  :data="packResult.cells" 
+                  stripe 
+                  highlight-current-row
+                  @current-change="handlePackCellChange"
+                  style="width: 100%"
+                >
+                  <el-table-column prop="cellBarcode" label="电芯条码">
+                    <template #default="{ row }">
+                      <span class="barcode-font">{{ row.cellBarcode }}</span>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="section-title">工艺履历明细</div>
+              <div class="process-flow">
+                <div 
+                  v-for="(proc, idx) in processList" 
+                  :key="proc.key"
+                  class="process-card"
+                  :class="{ 
+                    active: selectedProcess === proc.key,
+                    'is-done': proc.status === 'submitted',
+                    'is-pending': proc.status === 'not_entered'
+                  }"
+                  @click="selectedProcess = proc.key"
+                >
+                  <div class="process-card__header">
+                    <span class="process-card__index">{{ idx + 1 }}</span>
+                    <span class="process-card__name">{{ proc.name }}</span>
+                    <el-icon v-if="proc.status === 'submitted'" class="status-icon"><Check /></el-icon>
+                  </div>
+                  <div v-if="proc.record" class="process-card__meta">
+                    {{ proc.record.operatorName || '系统' }} · {{ formatTimeShort(proc.record.createdAt) }}
+                  </div>
+                  <div v-else class="process-card__meta pending">等待录入</div>
+                </div>
+              </div>
+            </template>
           </div>
 
-          <!-- Cell List (batch mode) -->
-          <div v-if="mode === 'batch'" class="cell-table">
-            <div class="cell-table__header">
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00acc1" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
-              <span>批次电芯列表</span>
-              <span v-if="cellTotal > 0" class="cell-table__count">共 {{ cellTotal }} 个电芯</span>
-            </div>
-            <el-table :data="cellList" v-loading="cellLoading" stripe border empty-text="该批次暂无电芯数据" class="cell-table__grid">
-              <el-table-column prop="barcode" label="条码" min-width="160" />
-              <el-table-column prop="grade" label="等级" width="80">
-                <template #default="{ row }">
-                  <el-tag :type="gradeTag(row.grade)" size="small" effect="plain">{{ row.grade || '-' }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="voltage" label="电压(V)" width="100">
-                <template #default="{ row }">{{ row.voltage?.toFixed(3) }}</template>
-              </el-table-column>
-              <el-table-column prop="internalResistance" label="内阻(mΩ)" width="100" />
-              <el-table-column prop="capacity" label="容量(mAh)" width="100" />
-              <el-table-column prop="importedAt" label="导入时间" width="180" />
-            </el-table>
-            <div v-if="cellTotal > pageSize" class="cell-table__pagination">
-              <el-pagination
-                v-model:current-page="cellPage"
-                :page-size="pageSize"
-                :total="cellTotal"
-                layout="total, prev, pager, next"
-                @current-change="loadCellList"
-              />
-            </div>
+          <!-- Right Side: Detailed Data (Cell/Batch) OR Cell Details (Pack) -->
+          <div class="detail-section">
+            <template v-if="mode === 'pack'">
+              <div v-if="previewLoading" class="preview-loading-box">
+                <el-skeleton :rows="8" animated />
+              </div>
+              <div v-else-if="previewData" class="cell-passport-mini">
+                <div class="mini-header">
+                  <div class="mini-header__title">电芯档案: {{ previewData.cell.barcode }}</div>
+                  <div class="mini-header__grade" :class="`grade-${previewData.cell.grade}`">{{ previewData.cell.grade || '?' }}级</div>
+                </div>
+
+                <div class="mini-kpis">
+                  <div class="m-kpi">
+                    <label>电压</label>
+                    <span>{{ previewData.cell.voltage?.toFixed(3) }}<small>V</small></span>
+                  </div>
+                  <div class="m-kpi">
+                    <label>内阻</label>
+                    <span>{{ previewData.cell.internalResistance }}<small>mΩ</small></span>
+                  </div>
+                  <div class="m-kpi">
+                    <label>容量</label>
+                    <span>{{ previewData.cell.capacity }}<small>mAh</small></span>
+                  </div>
+                </div>
+
+                <div class="mini-processes">
+                  <div v-for="proc in getPreviewProcessList(previewData)" :key="proc.key" class="mini-proc-card">
+                    <div class="mini-proc-header">
+                      <span class="mini-proc-name">{{ proc.name }}</span>
+                      <el-tag size="mini" :type="stepTag(proc)" round>{{ stepLabel(proc) }}</el-tag>
+                    </div>
+                    <div class="mini-proc-fields">
+                      <div v-for="field in getProcessFields(proc)" :key="field.key" class="mini-field">
+                        <label>{{ field.label }}</label>
+                        <span>{{ field.value }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mini-footer">
+                  <el-button type="primary" link @click="jumpToCellTrace(previewData.cell.barcode)">进入深度追溯</el-button>
+                </div>
+              </div>
+              <div v-else class="empty-detail">
+                <el-icon :size="48"><Pointer /></el-icon>
+                <p>点击左侧列表查看电芯详情</p>
+              </div>
+            </template>
+
+            <template v-else>
+              <div v-if="selectedRecord" class="minimal-card detail-card">
+                <div class="card-header">
+                  <span class="card-header__title">{{ selectedProcessName }} · 详细参数</span>
+                  <el-tag round size="small" :type="stepTag(selectedProcInfo!)">{{ stepLabel(selectedProcInfo!) }}</el-tag>
+                </div>
+                <div class="detail-grid">
+                  <template v-for="group in groupedFields" :key="group.title">
+                    <div class="detail-group-title">{{ group.title }}</div>
+                    <div v-for="field in group.fields" :key="field.key" class="detail-field">
+                      <label>{{ field.label }}</label>
+                      <span>{{ field.value }}</span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              
+              <div v-else-if="mode === 'batch' && cellList.length > 0" class="minimal-card table-card">
+                <div class="card-header">
+                  <span class="card-header__title">批次电芯档案清单</span>
+                  <div class="card-header__extra">
+                    <el-tag effect="plain" round>共 {{ cellTotal }} 个电芯</el-tag>
+                  </div>
+                </div>
+                <el-table :data="cellList" v-loading="cellLoading" stripe style="width: 100%">
+                  <el-table-column type="index" label="#" width="60" align="center" />
+                  <el-table-column prop="barcode" label="电芯 SN 条码" min-width="200">
+                    <template #default="{ row }">
+                      <span class="barcode-font">{{ row.barcode }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="grade" label="品质等级" width="100" align="center">
+                    <template #default="{ row }">
+                      <el-tag :type="row.grade === 'A' ? 'success' : 'warning'" size="small">{{ row.grade || '-' }}</el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="voltage" label="电压(V)" width="120">
+                    <template #default="{ row }">
+                      <span class="value-text">{{ row.voltage?.toFixed(3) || '-' }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="internalResistance" label="内阻(mΩ)" width="120">
+                    <template #default="{ row }">
+                      <span class="value-text">{{ row.internalResistance || '-' }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="120" align="right">
+                    <template #default="{ row }">
+                      <el-button link type="primary" @click="jumpToCellTrace(row.barcode)">查看档案</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                <div class="table-pagination">
+                  <el-pagination
+                    v-model:current-page="cellPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[20, 50, 100]"
+                    layout="total, sizes, prev, pager, next"
+                    :total="cellTotal"
+                    @size-change="handleSizeChange"
+                    @current-change="loadCellList"
+                  />
+                </div>
+              </div>
+
+              <div v-else class="empty-detail">
+                <el-icon :size="48"><Operation /></el-icon>
+                <p>选择左侧工序查看详细数据</p>
+              </div>
+            </template>
           </div>
-        </main>
+        </div>
+      </main>
+    </div>
+
+    <!-- ===== Cell Preview Drawer ===== -->
+    <el-drawer
+      v-model="previewVisible"
+      :title="`电芯快速预览: ${previewBarcode}`"
+      size="600px"
+      destroy-on-close
+      class="apple-drawer"
+    >
+      <div v-if="previewLoading" class="preview-loading">
+        <el-skeleton :rows="10" animated />
       </div>
-    </template>
+      <div v-else-if="previewData" class="preview-container">
+        <div class="preview-kpis">
+          <div class="p-kpi">
+            <div class="p-kpi__val">{{ previewData.cell.voltage?.toFixed(3) || '-' }}<small>V</small></div>
+            <div class="p-kpi__lab">电压</div>
+          </div>
+          <div class="p-kpi">
+            <div class="p-kpi__val">{{ previewData.cell.internalResistance || '-' }}<small>mΩ</small></div>
+            <div class="p-kpi__lab">内阻</div>
+          </div>
+          <div class="p-kpi">
+            <div class="p-kpi__val">{{ previewData.cell.capacity || '-' }}<small>mAh</small></div>
+            <div class="p-kpi__lab">容量</div>
+          </div>
+        </div>
+        <div class="preview-timeline">
+          <div class="tl-title">工序进度 ({{ previewDoneSteps }}/13)</div>
+          <el-steps direction="vertical" :active="previewDoneSteps" finish-status="success">
+            <el-step v-for="p in previewProcessList" :key="p.key" :title="p.name">
+              <template #description>
+                <div v-if="p.record" class="tl-desc">
+                  {{ p.record.operatorName }} · {{ formatTime(p.record.createdAt) }}
+                </div>
+              </template>
+            </el-step>
+          </el-steps>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Box, Cpu, Calendar, Coin, Operation, Download, User, Search, Check, Pointer } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { cellApi, type CellTraceResult } from '@/api/cells'
 import { batchApi } from '@/api/batch'
+import { getPackByBarcode, type Pack } from '@/api/pack'
 
-/* ============ Process Definitions ============ */
+/* ============ Constants & Types ============ */
+import { processDictionaryApi } from '@/api/process-dictionary'
+
+// Dynamic Process Definitions
+const processDict = ref<Record<string, any>>({})
+const PROCESS_FIELD_GROUPS_DYNAMIC = ref<Record<string, any>>({})
 
 const PROCESS_ORDER = [
   { key: 'batching', name: '配料' },
@@ -322,7 +449,6 @@ const PROCESS_ORDER = [
   { key: 'sorting', name: '分选' },
 ]
 
-/* Process field labels grouped by category */
 const PROCESS_FIELD_GROUPS: Record<string, { title: string; fields: Record<string, string> }[]> = {
   batching: [
     { title: '材料参数', fields: { positiveMaterial: '正极材料', negativeMaterial: '负极材料', viscosityRecord: '粘度记录' } },
@@ -399,37 +525,47 @@ const SKIP_FIELDS = new Set(['batchNo', 'id', 'createdBy', 'createdAt', 'updated
 const route = useRoute()
 const router = useRouter()
 
-const mode = ref<'barcode' | 'batch'>('barcode')
-const barcode = ref((route.query.barcode as string) || '')
-const batchQuery = ref((route.query.batchNo as string) || '')
-const result = ref<CellTraceResult | null>(null)
-const batchResult = ref<any>(null)
-const processes = ref<Record<string, any>>({})
-const batchInfo = ref<any>(null)
+const mode = ref<'barcode' | 'batch' | 'pack'>('barcode')
+const queryValue = ref('')
+const hasSearched = ref(false)
+const tracing = ref(false)
 const notFound = ref(false)
 const notFoundMsg = ref('')
-const tracing = ref(false)
+
+// Results data
+const result = ref<CellTraceResult | null>(null)
+const batchResult = ref<any>(null)
+const packResult = ref<Pack | null>(null)
+const processes = ref<Record<string, any>>({})
+const batchInfo = ref<any>(null)
 const selectedProcess = ref<string | null>(null)
+
+// History (LocalStorage)
+const recentSearches = ref<{ mode: string; value: string }[]>([])
 
 // Cell list (batch mode)
 const cellList = ref<any[]>([])
 const cellLoading = ref(false)
 const cellPage = ref(1)
-const pageSize = 20
+const pageSize = ref(20)
 const cellTotal = ref(0)
 
-// Batch select options
-const batchOptions = ref<any[]>([])
-const batchSearchLoading = ref(false)
-let searchTimeout: any = null
+// Preview Drawer
+const previewVisible = ref(false)
+const previewLoading = ref(false)
+const previewBarcode = ref('')
+const previewData = ref<CellTraceResult | null>(null)
 
 /* ============ Computed ============ */
 
-const grade = computed(() => result.value?.cell.grade || '')
+const placeholderText = computed(() => {
+  if (mode.value === 'barcode') return '输入电芯 SN 条码...'
+  if (mode.value === 'batch') return '输入生产批次号...'
+  return '输入 Pack 条码...'
+})
 
 const processList = computed(() => {
   const data = processes.value
-  if (!data || Object.keys(data).length === 0) return []
   return PROCESS_ORDER.map((p) => {
     const record = data[p.key] || null
     let status = 'not_entered'
@@ -453,828 +589,1055 @@ const selectedProcInfo = computed(() => {
 
 const selectedProcessName = computed(() => {
   const p = PROCESS_ORDER.find((x) => x.key === selectedProcess.value)
-  return p?.name || selectedProcess.value || ''
+  return p?.name || ''
 })
 
 const groupedFields = computed(() => {
   const record = selectedRecord.value
   if (!record) return []
-  const groups = PROCESS_FIELD_GROUPS[selectedProcess.value!]
-  if (!groups) {
-    // Fallback: ungrouped fields
-    const fields = Object.entries(record)
-      .filter(([key]) => !SKIP_FIELDS.has(key))
-      .map(([key, val]) => ({ key, label: key, value: formatValue(val) }))
-    return fields.length > 0 ? [{ title: '参数', fields }] : []
+  
+  // Try dynamic first, fallback to hardcoded
+  let groups = PROCESS_FIELD_GROUPS_DYNAMIC.value[selectedProcess.value!]
+  if (!groups || groups.length === 0) {
+    groups = PROCESS_FIELD_GROUPS[selectedProcess.value!]
   }
+  
+  if (!groups) return []
+
+  // Merge record fields and extraData
+  const allData = { ...record }
+  if (record.extraData) {
+    try {
+      const extra = JSON.parse(record.extraData)
+      Object.assign(allData, extra)
+    } catch (e) {}
+  }
+
   return groups
-    .map((g) => ({
+    .map((g: any) => ({
       title: g.title,
-      fields: Object.entries(g.fields)
-        .filter(([key]) => record[key] !== undefined && record[key] !== null)
-        .map(([key, label]) => ({ key, label, value: formatValue(record[key]) })),
+      fields: (Array.isArray(g.fields) ? g.fields : Object.entries(g.fields).map(([k, l]) => ({ key: k, label: l, unit: '' })))
+        .filter((f: any) => allData[f.key] !== undefined && allData[f.key] !== null)
+        .map((f: any) => ({ 
+          key: f.key, 
+          label: f.label, 
+          value: formatValue(allData[f.key]) + (f.unit ? ` ${f.unit}` : '') 
+        })),
     }))
-    .filter((g) => g.fields.length > 0)
+    .filter((g: any) => g.fields.length > 0)
 })
 
-const statusSummary = computed(() => {
-  const list = processList.value
-  const total = list.length
-  const done = list.filter((p) => p.status !== 'not_entered').length
-  return `已完成 ${done}/${total} 工序`
+const previewProcessList = computed(() => {
+  const data = previewData.value?.processes || {}
+  return PROCESS_ORDER.map((p) => {
+    const record = data[p.key] || null
+    let status = record ? (record.isDraft ? 'draft' : 'submitted') : 'not_entered'
+    return { ...p, record, status }
+  })
 })
 
-const progressPercent = computed(() => {
-  const list = processList.value
-  if (list.length === 0) return 0
-  const done = list.filter((p) => p.status !== 'not_entered').length
-  return Math.round((done / list.length) * 100)
+const previewDoneSteps = computed(() => {
+  return previewProcessList.value.filter(p => p.status === 'submitted').length
 })
 
-const hintText = computed(() => {
-  return mode.value === 'barcode'
-    ? '扫描或输入电芯条码开始追溯'
-    : '输入批次号查看完整追溯信息'
-})
+const materialList = computed(() => {
+  if (!result.value?.processes) return []
+  const mats: { label: string; value: string }[] = []
+  const data = result.value.processes
 
-const batchStatusType = computed(() => {
-  const s = batchInfo.value?.status
-  if (s === 2) return 'primary'
-  if (s === 3) return 'success'
-  if (s === 4) return 'danger'
-  return 'info'
-})
+  // Extract from process records based on known material fields
+  if (data.batching?.positiveMaterial) mats.push({ label: '正极材料批次', value: data.batching.positiveMaterial })
+  if (data.batching?.negativeMaterial) mats.push({ label: '负极材料批次', value: data.batching.negativeMaterial })
+  if (data.winding?.separatorModel) mats.push({ label: '隔膜型号', value: data.winding.separatorModel })
+  if (data.assembly?.shellModel) mats.push({ label: '壳体型号', value: data.assembly.shellModel })
+  if (data.assembly?.capModel) mats.push({ label: '盖板型号', value: data.assembly.capModel })
+  if (data.injection?.electrolyteModel) mats.push({ label: '电解液型号', value: data.injection.electrolyteModel })
+  if (data.wrapping?.filmModel) mats.push({ label: '包装膜型号', value: data.wrapping.filmModel })
 
-const batchStatusText = computed(() => {
-  const map: Record<number, string> = { 1: '草稿', 2: '进行中', 3: '已完成', 4: '已关闭' }
-  return map[batchInfo.value?.status] || '未知'
+  return mats
 })
 
 /* ============ Methods ============ */
 
-function gradeTag(g: string | null): string {
-  if (g === 'A') return 'success'
-  if (g === 'B') return 'warning'
-  return 'info'
+async function loadProcessDefinitions() {
+  try {
+    const res = await processDictionaryApi.list({ pageSize: 100, isActive: true })
+    const items = res.data?.items || []
+    
+    const dict: Record<string, any> = {}
+    const fieldGroups: Record<string, any> = {}
+    
+    items.forEach(item => {
+      dict[item.processCode] = item
+      if (item.fieldDefinitions) {
+        try {
+          const fields = JSON.parse(item.fieldDefinitions)
+          // Group fields by their 'group' property
+          const groups: any[] = []
+          const groupMap: Record<string, any> = {}
+          
+          fields.forEach((f: any) => {
+            const groupName = f.group || '基本参数'
+            if (!groupMap[groupName]) {
+              groupMap[groupName] = { title: groupName, fields: [] }
+              groups.push(groupMap[groupName])
+            }
+            groupMap[groupName].fields.push({
+              key: f.key,
+              label: f.label,
+              unit: f.unit
+            })
+          })
+          fieldGroups[item.processCode] = groups
+        } catch (e) {
+          console.error(`Parse fields for ${item.processCode} failed`, e)
+        }
+      }
+    })
+    
+    processDict.value = dict
+    PROCESS_FIELD_GROUPS_DYNAMIC.value = fieldGroups
+  } catch (e) {
+    console.error('Load process definitions failed', e)
+  }
 }
 
-function stepTag(proc: { status: string }): string {
-  return { submitted: 'success', draft: 'warning', not_entered: 'info', voided: 'danger' }[proc.status] || 'info'
-}
-
-function stepLabel(proc: { status: string }): string {
-  return { submitted: '已提交', draft: '草稿', not_entered: '未录入', voided: '已作废' }[proc.status] || proc.status
+function getProcessFields(proc: any) {
+  const record = proc.record
+  if (!record) return []
+  
+  // Try dynamic first, fallback to hardcoded
+  let groups = PROCESS_FIELD_GROUPS_DYNAMIC.value[proc.key]
+  if (!groups || groups.length === 0) {
+    groups = PROCESS_FIELD_GROUPS[proc.key]
+  }
+  
+  if (!groups) return []
+  
+  // Merge record fields and extraData
+  const allData = { ...record }
+  if (record.extraData) {
+    try {
+      const extra = JSON.parse(record.extraData)
+      Object.assign(allData, extra)
+    } catch (e) {}
+  }
+  
+  return groups.flatMap((g: any) => 
+    (Array.isArray(g.fields) ? g.fields : Object.entries(g.fields).map(([k, l]) => ({ key: k, label: l, unit: '' })))
+      .filter((f: any) => allData[f.key] !== undefined && allData[f.key] !== null)
+      .map((f: any) => ({ 
+        key: f.key, 
+        label: f.label, 
+        value: formatValue(allData[f.key]) + (f.unit ? ` ${f.unit}` : '') 
+      }))
+  )
 }
 
 function formatValue(val: any): string {
   if (val === null || val === undefined) return '-'
-  if (typeof val === 'boolean') return val ? '是' : '否'
-  if (typeof val === 'number') {
-    return Number.isInteger(val) ? val.toString() : val.toFixed(2)
-  }
-  return String(val) || '-'
+  if (typeof val === 'number') return Number.isInteger(val) ? val.toString() : val.toFixed(3)
+  return String(val)
 }
 
 function formatTime(iso: string): string {
   if (!iso) return '-'
-  const d = new Date(iso).getTime()
-  if (isNaN(d)) return iso
-  return new Date(d).toLocaleString('zh-CN', { hour12: false })
+  return new Date(iso).toLocaleString('zh-CN', { hour12: false })
 }
 
-function switchMode(m: 'barcode' | 'batch') {
+function formatTimeShort(iso: string): string {
+  if (!iso) return '-'
+  return new Date(iso).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) + ' ' + 
+         new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+function stepTag(proc: { status: string }): any {
+  return { submitted: 'success', draft: 'warning', not_entered: 'info', voided: 'danger' }[proc.status] || 'info'
+}
+
+function stepLabel(proc: { status: string }): string {
+  return { submitted: '已入库', draft: '草稿', not_entered: '未开始', voided: '作废' }[proc.status] || '未知'
+}
+
+function switchMode(m: 'barcode' | 'batch' | 'pack') {
   mode.value = m
   resetSearch()
 }
 
 function resetSearch() {
+  hasSearched.value = false
   result.value = null
   batchResult.value = null
+  packResult.value = null
   processes.value = {}
   batchInfo.value = null
   notFound.value = false
   selectedProcess.value = null
-  cellList.value = []
-  cellTotal.value = 0
 }
 
 async function handleTrace() {
-  if (mode.value === 'barcode') {
-    const code = barcode.value.trim()
-    if (!code) return
-    await traceByBarcode(code)
-  } else {
-    const batchNo = batchQuery.value.trim()
-    if (!batchNo) return
-    await traceByBatch(batchNo)
-  }
-}
+  const val = queryValue.value.trim()
+  if (!val) return
 
-async function searchBatches(query: string) {
-  if (query !== '') {
-    batchSearchLoading.value = true
-    if (searchTimeout) clearTimeout(searchTimeout)
-    searchTimeout = setTimeout(async () => {
-      try {
-        const res = await batchApi.list({ keyword: query, pageSize: 20 })
-        batchOptions.value = res.data.items
-      } catch (e) {
-        batchOptions.value = []
-      } finally {
-        batchSearchLoading.value = false
-      }
-    }, 300)
-  } else {
-    batchOptions.value = []
-  }
-}
-
-async function traceByBarcode(code: string) {
-  resetSearch()
   tracing.value = true
+  notFound.value = false
+  hasSearched.value = true
+
   try {
-    const res = await cellApi.trace(code)
-    result.value = res.data
-    processes.value = res.data.processes || {}
-    batchInfo.value = res.data.batch
-    selectedProcess.value = null
+    if (mode.value === 'barcode') {
+      const res = await cellApi.trace(val)
+      result.value = res.data
+      processes.value = res.data.processes || {}
+      batchInfo.value = res.data.batch
+    } else if (mode.value === 'batch') {
+      const [batchRes, recordsRes] = await Promise.all([
+        batchApi.getByNo(val),
+        batchApi.getProcessRecords(val),
+      ])
+      batchResult.value = batchRes
+      batchInfo.value = batchRes.data
+      processes.value = recordsRes.data || {}
+      await loadCellList()
+    } else if (mode.value === 'pack') {
+      const res = await getPackByBarcode(val)
+      packResult.value = res.data
+    }
+    saveToHistory(mode.value, val)
   } catch (e: any) {
     notFound.value = true
-    const status = e?.response?.status
-    if (status === 404) {
-      notFoundMsg.value = '未找到该电芯条码'
-    } else {
-      notFoundMsg.value = e?.response?.data?.message || '查询失败'
-    }
-  } finally {
-    tracing.value = false
-  }
-}
-
-async function traceByBatch(batchNo: string) {
-  resetSearch()
-  tracing.value = true
-  try {
-    const [batchRes, recordsRes] = await Promise.all([
-      batchApi.getByNo(batchNo),
-      batchApi.getProcessRecords(batchNo),
-    ])
-    batchResult.value = batchRes
-    batchInfo.value = batchRes.data
-    processes.value = recordsRes.data || {}
-    selectedProcess.value = null
-    cellPage.value = 1
-    await loadCellList()
-  } catch (e: any) {
-    notFound.value = true
-    const status = e?.response?.status
-    if (status === 404) {
-      notFoundMsg.value = '未找到该批次'
-    } else {
-      notFoundMsg.value = e?.response?.data?.message || '查询失败'
-    }
+    notFoundMsg.value = e?.response?.status === 404 ? '未找到对应数据' : '查询出错，请重试'
   } finally {
     tracing.value = false
   }
 }
 
 async function loadCellList() {
-  const batchNo = batchQuery.value.trim()
-  if (!batchNo) return
   cellLoading.value = true
   try {
-    const res = await cellApi.findByBatch(batchNo, cellPage.value, pageSize)
+    const val = queryValue.value.trim()
+    const res = await cellApi.findByBatch(val, cellPage.value, pageSize.value)
     cellList.value = res.data
     cellTotal.value = res.meta?.total ?? 0
-  } catch {
-    cellList.value = []
-    cellTotal.value = 0
   } finally {
     cellLoading.value = false
   }
 }
 
-function goBatchDetail(batchNo: string) {
-  router.push(`/batches/${batchNo}`)
+function handleSizeChange(val: number) {
+  pageSize.value = val
+  cellPage.value = 1
+  loadCellList()
+}
+
+async function handlePackCellChange(val: any) {
+  if (!val) return
+  previewBarcode.value = val.cellBarcode
+  previewLoading.value = true
+  try {
+    const res = await cellApi.trace(val.cellBarcode)
+    previewData.value = res.data
+  } catch (e) {
+    ElMessage.error('获取电芯详情失败')
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+function getPreviewProcessList(data: CellTraceResult) {
+  const processes = data.processes || {}
+  return PROCESS_ORDER.map(p => {
+    const record = processes[p.key] || null
+    let status = record ? (record.isDraft ? 'draft' : 'submitted') : 'not_entered'
+    return { ...p, record, status }
+  })
+}
+
+// History logic
+function saveToHistory(m: string, v: string) {
+  const existing = recentSearches.value.findIndex(h => h.value === v)
+  if (existing > -1) recentSearches.value.splice(existing, 1)
+  recentSearches.value.unshift({ mode: m, value: v })
+  if (recentSearches.value.length > 10) recentSearches.value.pop()
+  localStorage.setItem('yt_mes_recent_trace', JSON.stringify(recentSearches.value))
+}
+
+function clearHistory() {
+  recentSearches.value = []
+  localStorage.removeItem('yt_mes_recent_trace')
+}
+
+function redoSearch(item: { mode: string; value: string }) {
+  mode.value = item.mode as any
+  queryValue.value = item.value
+  handleTrace()
+}
+
+function removeHistoryItem(idx: number) {
+  recentSearches.value.splice(idx, 1)
+  localStorage.setItem('yt_mes_recent_trace', JSON.stringify(recentSearches.value))
+}
+
+async function previewCell(cellBarcode: string) {
+  previewBarcode.value = cellBarcode
+  previewVisible.value = true
+  previewLoading.value = true
+  try {
+    const res = await cellApi.trace(cellBarcode)
+    previewData.value = res.data
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+function jumpToCellTrace(cellBarcode: string) {
+  mode.value = 'barcode'
+  queryValue.value = cellBarcode
+  handleTrace()
 }
 
 /* ============ Lifecycle ============ */
 
 onMounted(() => {
+  loadProcessDefinitions()
+  const saved = localStorage.getItem('yt_mes_recent_trace')
+  if (saved) recentSearches.value = JSON.parse(saved)
+
   if (route.query.barcode) {
     mode.value = 'barcode'
-    barcode.value = route.query.barcode as string
+    queryValue.value = route.query.barcode as string
     handleTrace()
   } else if (route.query.batchNo) {
     mode.value = 'batch'
-    batchQuery.value = route.query.batchNo as string
+    queryValue.value = route.query.batchNo as string
     handleTrace()
   }
 })
 </script>
 
 <style scoped>
-/* ========================================
-   Trace Page – Industrial MES Theme
-   ======================================== */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .trace-page {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 84px);
+  background: #f9f9fb;
+  padding: 0;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ===== Search Bar ===== */
-.search-bar {
+/* ===== Search Container (Apple Style) ===== */
+.search-container {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  border-radius: 8px 8px 0 0;
-  margin-bottom: 20px;
-}
-.search-bar__modes {
-  display: flex;
-  gap: 2px;
-  background: #f0f2f5;
-  border-radius: 6px;
-  padding: 2px;
-  flex-shrink: 0;
-}
-.search-bar__mode {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: #606266;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all .2s;
-  white-space: nowrap;
-}
-.search-bar__mode:hover { color: #303133; }
-.search-bar__mode.active {
-  background: #fff;
-  color: #1a237e;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1);
-}
-.search-bar__input-wrap {
-  flex: 1;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.search-bar__input-wrap .el-input { flex: 1; }
-.search-bar__btn { flex-shrink: 0; }
-
-/* ===== Idle State ===== */
-.idle-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 80px 20px;
-  gap: 16px;
-}
-.idle-state__graphic {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: #f5f7fa;
-  display: flex;
   align-items: center;
-  justify-content: center;
-}
-.idle-state__text {
-  margin: 0;
-  font-size: 16px;
-  color: #606266;
-  font-weight: 500;
-}
-.idle-state__sub {
-  margin: 0;
-  font-size: 13px;
-  color: #c0c4cc;
-}
-
-/* ===== Loading Skeleton ===== */
-.loading-skeleton { margin-top: 4px; }
-.loading-skeleton__layout {
-  display: flex;
-  gap: 20px;
-}
-.loading-skeleton__nav {
-  width: 160px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.loading-skeleton__content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.skeleton-block {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 6px;
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ===== Error State ===== */
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   padding: 60px 20px;
-  gap: 16px;
-  background: #fff;
-  border-radius: 8px;
-}
-.error-state__text {
-  margin: 0;
-  font-size: 14px;
-  color: #f56c6c;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ========================================
-   Two-Column Layout (results)
-   ======================================== */
-.trace-layout {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-/* ===== Process Navigation (Left) ===== */
-.process-nav {
-  width: 170px;
-  flex-shrink: 0;
+.is-searched .search-container {
+  padding: 20px 40px;
   background: #fff;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: sticky;
-  top: 8px;
-}
-.process-nav__header {
-  padding: 10px 14px;
   border-bottom: 1px solid #f0f0f0;
-  font-size: 12px;
-  font-weight: 600;
-  color: #909399;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
-.process-nav__list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-.process-nav__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  cursor: pointer;
-  transition: all .15s;
-  border-left: 3px solid transparent;
-  font-size: 13px;
-}
-.process-nav__item:hover {
-  background: #f5f7fa;
-}
-.process-nav__item.active {
-  background: #ecf5ff;
-  border-left-color: #409eff;
-}
-.process-nav__dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-}
-.dot-submitted { background: #67c23a; }
-.dot-draft { background: #e6a23c; }
-.dot-not_entered { background: #dcdfe6; color: #909399; }
-.dot-voided { background: #f56c6c; }
 
-.process-nav__name {
-  flex: 1;
-  color: #303133;
-  font-weight: 500;
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.process-nav__badge {
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  font-weight: 500;
-}
-.badge-submitted { color: #67c23a; background: #f0f9eb; }
-.badge-draft { color: #e6a23c; background: #fdf6ec; }
-.badge-not_entered { color: #c0c4cc; background: #f5f7fa; }
-.badge-voided { color: #f56c6c; background: #fef0f0; }
-
-/* ===== Process Nav Summary ===== */
-.process-nav__summary {
-  padding: 10px 14px;
-  border-top: 1px solid #f0f0f0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.process-nav__progress-track {
-  height: 4px;
-  background: #ebeef5;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.process-nav__progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #409eff, #67c23a);
-  border-radius: 2px;
-  transition: width .5s ease;
-}
-.process-nav__progress-text {
-  font-size: 11px;
-  color: #909399;
+.search-box {
+  width: 100%;
+  max-width: 720px;
   text-align: center;
+  transition: all 0.5s;
 }
 
-/* ========================================
-   Right Content Area
-   ======================================== */
-.trace-content {
-  flex: 1;
-  min-width: 0;
+.is-searched .search-box {
+  max-width: 1200px;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 24px;
 }
 
-/* ===== KPI Cards ===== */
-.kpi-cards {
+.search-box__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin-bottom: 32px;
+  letter-spacing: -0.5px;
+}
+
+.search-box__tabs {
+  display: inline-flex;
+  background: #f2f2f7;
+  padding: 3px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.is-searched .search-box__tabs {
+  margin-bottom: 0;
+}
+
+.search-tab {
+  border: none;
+  background: transparent;
+  padding: 6px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #86868b;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.search-tab.active {
+  background: #fff;
+  color: #1d1d1f;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.search-box__input-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.apple-input :deep(.el-input__wrapper) {
+  border-radius: 14px;
+  padding-left: 16px;
+  background: #fff;
+  box-shadow: 0 0 0 1px #d2d2d7 inset;
+  height: 54px;
+  font-size: 16px;
+}
+
+.is-searched .apple-input :deep(.el-input__wrapper) {
+  height: 44px;
+  border-radius: 10px;
+}
+
+.apple-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px #0071e3 inset !important;
+}
+
+.apple-button {
+  height: 54px;
+  border-radius: 14px;
+  padding: 0 32px;
+  font-size: 16px;
+  font-weight: 600;
+  background: #0071e3;
+  border: none;
+}
+
+.is-searched .apple-button {
+  height: 44px;
+  border-radius: 10px;
+}
+
+/* ===== Recent Searches ===== */
+.recent-searches {
+  margin-top: 24px;
+  text-align: left;
+}
+
+.recent-searches__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: #86868b;
+  font-size: 13px;
+}
+
+.recent-searches__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recent-tag {
+  cursor: pointer;
+  transition: all 0.2s;
+  border-color: #d2d2d7 !important;
+  color: #1d1d1f !important;
+}
+
+.recent-tag:hover {
+  background: #f2f2f7;
+}
+
+/* ===== Results Area ===== */
+.results-container {
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 20px;
+  margin-bottom: 32px;
 }
-.kpi-card {
+
+.kpi-item {
   background: #fff;
-  border-radius: 8px;
-  padding: 16px 20px;
-  border: 1px solid #ebeef5;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: box-shadow .2s;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
 }
-.kpi-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
-}
-.kpi-card__value {
-  font-size: 24px;
+
+.kpi-item__val {
+  font-size: 28px;
   font-weight: 700;
-  color: #303133;
-  line-height: 1.2;
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  color: #1d1d1f;
+  font-family: 'SF Pro Display', -apple-system, sans-serif;
 }
-.kpi-card__unit {
+
+.kpi-item__val small {
   font-size: 14px;
   font-weight: 400;
-  color: #909399;
+  color: #86868b;
   margin-left: 2px;
 }
-.kpi-card__label {
-  font-size: 12px;
-  color: #909399;
-  letter-spacing: .3px;
-}
-.kpi-card__status {
-  font-size: 11px;
-  font-weight: 500;
-  margin-top: 2px;
-}
-.kpi-ok { color: #67c23a; }
-.kpi-warn { color: #e6a23c; }
-.kpi-err { color: #f56c6c; }
 
-/* ===== Barcode Display ===== */
-.barcode-display {
+.kpi-item__lab {
+  font-size: 13px;
+  color: #86868b;
+  margin-top: 4px;
+}
+
+/* ===== Grade Highlights ===== */
+.large-grade {
+  font-size: 48px !important;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.grade-A { color: #34c759 !important; }
+.grade-B { color: #ff9500 !important; }
+.grade-C { color: #ff3b30 !important; }
+
+/* ===== Barcode Passport Layout ===== */
+.barcode-passport {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  animation: slideUp 0.5s ease-out;
+}
+
+.passport-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.passport-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin-bottom: 8px;
+}
+
+.passport-meta {
+  font-size: 14px;
+  color: #86868b;
+}
+
+.passport-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.process-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
+}
+
+.process-detail-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header-left {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  background: #fafbfc;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
-}
-.barcode-display__label {
-  font-size: 12px;
-  color: #909399;
-  flex-shrink: 0;
-}
-.barcode-display__value {
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a237e;
-  letter-spacing: 1px;
-}
-.barcode-display__source {
-  margin-left: auto;
-  font-size: 12px;
-  color: #909399;
 }
 
-/* ===== Compact Pipeline Bar ===== */
-.pipeline-bar {
-  background: #fff;
-  border-radius: 8px;
-  padding: 12px 16px 6px;
-  border: 1px solid #ebeef5;
-}
-.pipeline-bar__inner {
-  display: flex;
-  align-items: center;
-}
-.pipeline-bar__node {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  flex: 1;
-}
-.pipeline-bar__dot {
-  width: 14px;
-  height: 14px;
+.step-num {
+  width: 24px;
+  height: 24px;
+  background: #f2f2f7;
+  color: #1d1d1f;
   border-radius: 50%;
-  flex-shrink: 0;
-  transition: transform .15s, box-shadow .15s;
-}
-.pipeline-bar__dot.is-active {
-  transform: scale(1.3);
-  box-shadow: 0 0 0 3px rgba(64,158,255,.25);
-}
-.pipeline-submitted .pipeline-bar__dot { background: #67c23a; }
-.pipeline-draft .pipeline-bar__dot { background: #e6a23c; }
-.pipeline-not_entered .pipeline-bar__dot { background: #dcdfe6; }
-.pipeline-voided .pipeline-bar__dot { background: #f56c6c; }
-
-.pipeline-bar__connector {
-  height: 3px;
-  flex: 1;
-  margin: 0 2px;
-  border-radius: 2px;
-}
-.conn-submitted { background: #67c23a; }
-.conn-draft { background: #e6a23c; }
-.conn-not_entered { background: #dcdfe6; }
-.conn-voided { background: #f56c6c; }
-
-.pipeline-bar__labels {
-  display: flex;
-  margin-top: 6px;
-}
-.pipeline-bar__label {
-  flex: 1;
-  text-align: center;
-  font-size: 10px;
-  color: #909399;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0 2px;
-}
-
-/* ===== Info Card (Batch) ===== */
-.info-card {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-}
-.info-card__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-}
-.info-card__tag { margin-left: auto; }
-.info-card__body { padding: 16px; }
-.info-card__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
-}
-.info-card__item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.info-card__label {
-  font-size: 11px;
-  color: #909399;
-  letter-spacing: .3px;
-}
-.info-card__value {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-.info-card__link {
-  color: #409eff;
-  cursor: pointer;
-  font-weight: 600;
-}
-.info-card__link:hover { text-decoration: underline; }
-
-/* ===== Detail Panel ===== */
-.detail-panel {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-}
-.detail-panel__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-}
-.detail-panel__body { padding: 0; }
-.detail-group {
-  border-bottom: 1px solid #f5f5f5;
-}
-.detail-group:last-child { border-bottom: none; }
-.detail-group__title {
-  padding: 10px 16px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #909399;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-}
-.detail-group__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0;
-}
-.detail-group__field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 16px;
-  border-right: 1px solid #f5f5f5;
-  border-bottom: 1px solid #f5f5f5;
-}
-.detail-group__field:nth-child(even) { border-right: none; }
-.detail-group__label {
-  font-size: 11px;
-  color: #909399;
-}
-.detail-group__value {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-
-/* ===== Hint Panel (no process selected) ===== */
-.hint-panel .hint-panel__body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 36px 20px;
-  color: #c0c4cc;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-/* ===== Cell Table ===== */
-.cell-table {
+.step-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.process-params {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+  flex: 1;
+}
+
+.param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.param-item label {
+  font-size: 11px;
+  color: #86868b;
+  text-transform: uppercase;
+}
+
+.param-item span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.process-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #f5f5f7;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #86868b;
+}
+
+/* ===== Material Trace Card ===== */
+.material-trace-card {
+  margin-top: 12px;
+}
+
+.material-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.material-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: #f9f9fb;
+  border-radius: 10px;
+}
+
+.mat-icon {
+  width: 40px;
+  height: 40px;
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #ebeef5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #0071e3;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
-.cell-table__header {
+
+.mat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mat-info label {
+  font-size: 11px;
+  color: #86868b;
+}
+
+.mat-info span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.empty-materials {
+  padding: 40px;
+  text-align: center;
+  color: #c7c7cc;
+  font-style: italic;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 32px;
+}
+
+.main-layout.is-pack-mode {
+  grid-template-columns: 400px 1fr;
+}
+
+.cell-list-container {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+}
+
+/* ===== Cell Passport Mini (Right Side) ===== */
+.cell-passport-mini {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+}
+
+.mini-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f5f5f7;
+}
+
+.mini-header__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.mini-header__grade {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.mini-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.m-kpi {
+  background: #f9f9fb;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.m-kpi label {
+  display: block;
+  font-size: 11px;
+  color: #86868b;
+  margin-bottom: 4px;
+}
+
+.m-kpi span {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.m-kpi small {
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+.mini-processes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mini-proc-card {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #f5f5f7;
+  border-radius: 8px;
+}
+
+.mini-proc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mini-proc-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.mini-proc-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.mini-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.mini-field label {
+  font-size: 10px;
+  color: #86868b;
+}
+
+.mini-field span {
+  font-size: 13px;
+  color: #1d1d1f;
+}
+
+.mini-footer {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.preview-loading-box {
+  padding: 40px;
+  background: #fff;
+  border-radius: 16px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
 }
-.cell-table__count {
-  margin-left: auto;
+
+/* ===== Process Flow Card Style ===== */
+.process-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.process-card {
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.process-card:hover {
+  transform: translateX(4px);
+  border-color: #d2d2d7;
+}
+
+.process-card.active {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 1px #0071e3;
+}
+
+.process-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.process-card__index {
   font-size: 12px;
-  font-weight: 400;
-  color: #909399;
+  color: #86868b;
+  width: 20px;
 }
-.cell-table__grid { border-radius: 0 0 8px 8px; }
-.cell-table__pagination {
-  padding: 12px 16px;
+
+.process-card__name {
+  font-weight: 600;
+  color: #1d1d1f;
+  flex: 1;
+}
+
+.status-icon {
+  color: #34c759;
+  font-weight: bold;
+}
+
+.process-card__meta {
+  font-size: 12px;
+  color: #86868b;
+  margin-left: 32px;
+}
+
+.process-card.is-pending {
+  background: #f9f9fb;
+  opacity: 0.7;
+}
+
+.process-card__meta.pending {
+  font-style: italic;
+  color: #c7c7cc;
+}
+
+/* ===== Minimal Card Common ===== */
+.minimal-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+}
+
+.pack-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.pack-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pack-item.full-width {
+  grid-column: span 2;
+}
+
+.pack-item label {
+  font-size: 12px;
+  color: #86868b;
+  text-transform: uppercase;
+}
+
+.pack-item span {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.pack-item .highlight {
+  color: #0071e3;
+}
+
+/* ===== Detail Card ===== */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f5f5f7;
+}
+
+.card-header__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.detail-group-title {
+  grid-column: span 2;
+  font-size: 13px;
+  font-weight: 600;
+  color: #86868b;
+  margin-top: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f5f5f7;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-field label {
+  font-size: 12px;
+  color: #86868b;
+}
+
+.detail-field span {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.empty-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: #c7c7cc;
+}
+
+.empty-detail p {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.barcode-font {
+  font-family: 'SF Mono', monospace;
+  font-weight: 600;
+}
+
+.table-pagination {
+  margin-top: 20px;
   display: flex;
   justify-content: flex-end;
 }
 
-/* ========================================
-   Responsive
-   ======================================== */
-@media (max-width: 1024px) {
-  .kpi-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .process-nav {
-    width: 140px;
-  }
-  .info-card__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+/* ===== Preview Drawer ===== */
+.p-kpi {
+  text-align: center;
+  padding: 20px;
+  background: #f5f5f7;
+  border-radius: 12px;
 }
-@media (max-width: 768px) {
-  .search-bar {
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-  }
-  .search-bar__input-wrap {
-    width: 100%;
-  }
-  .trace-layout {
-    flex-direction: column;
-  }
-  .process-nav {
-    width: 100%;
-    position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0;
-  }
-  .process-nav__header { display: none; }
-  .process-nav__list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 6px;
-  }
-  .process-nav__item {
-    border-left: none;
-    border-bottom: 2px solid transparent;
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  .process-nav__item.active {
-    border-left: none;
-    border-bottom-color: #409eff;
-  }
-  .process-nav__badge { display: none; }
-  .process-nav__summary {
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-  }
-  .process-nav__progress-track { flex: 1; }
-  .kpi-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .kpi-card__value {
-    font-size: 20px;
-  }
-  .pipeline-bar__label {
-    font-size: 8px;
-  }
-  .detail-group__grid {
+
+.p-kpi__val {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.p-kpi__lab {
+  font-size: 12px;
+  color: #86868b;
+}
+
+.tl-desc {
+  font-size: 12px;
+  color: #86868b;
+}
+
+@media (max-width: 1100px) {
+  .main-layout {
     grid-template-columns: 1fr;
   }
-  .detail-group__field:nth-child(even) { border-right: 1px solid #f5f5f5; }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

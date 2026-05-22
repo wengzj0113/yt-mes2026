@@ -15,39 +15,39 @@ export enum MaterialStatus {
 
 @Entity('material_warehouse')
 export class MaterialWarehouse {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ length: 16 })
+  @Column({ name: 'batch_no', length: 16 })
   batchNo: string;
 
-  @Column({ type: 'tinyint' })
+  @Column({ name: 'material_type', type: 'tinyint' })
   materialType: number;
 
-  @Column({ length: 32 })
+  @Column({ name: 'supplier_batch_no', length: 32 })
   supplierBatchNo: string;
 
-  @Column({ type: 'tinyint', default: MaterialStatus.QUALIFIED })
+  @Column({ name: 'status', type: 'tinyint', default: MaterialStatus.QUALIFIED })
   status: number = MaterialStatus.QUALIFIED;
 
-  @Column({ length: 32, nullable: true })
+  @Column({ name: 'warehouse_person', length: 32, nullable: true })
   warehousePerson: string;
 
-  @Column({ type: 'decimal', precision: 12, scale: 3 })
+  @Column({ name: 'quantity', type: 'decimal', precision: 12, scale: 3 })
   quantity: number;
 
-  @Column({ length: 16, default: 'kg' })
+  @Column({ name: 'unit', length: 16, default: 'kg' })
   unit: string = 'kg';
 
-  @Column({ type: 'int' })
+  @Column({ name: 'created_by', type: 'int' })
   createdBy: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'updated_by', type: 'int', nullable: true })
   updatedBy: number | null;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date | null;
 }

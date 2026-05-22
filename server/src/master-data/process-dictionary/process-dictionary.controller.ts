@@ -12,6 +12,12 @@ export class ProcessDictionaryController {
     return { success: true, data };
   }
 
+  @Get('code/:code')
+  async findByCode(@Param('code') code: string) {
+    const data = await this.processDictionaryService.findByCode(code);
+    return { success: true, data };
+  }
+
   @Post()
   async create(@Body() body: Partial<ProcessDictionary>) {
     const data = await this.processDictionaryService.create(body);

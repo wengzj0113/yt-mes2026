@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { BatchingService } from '../batching/batching.service';
 import { CoatingService } from '../coating/coating.service';
 import { RollerPressingService } from '../roller-pressing/roller-pressing.service';
@@ -37,6 +38,7 @@ export class ProcessStatusService {
   private readonly processes: ProcessDef[];
 
   constructor(
+    private readonly dataSource: DataSource,
     private readonly batchingService: BatchingService,
     private readonly coatingService: CoatingService,
     private readonly rollerPressingService: RollerPressingService,
@@ -69,50 +71,85 @@ export class ProcessStatusService {
   }
 
   async getProcessStatuses(batchNo: string): Promise<ProcessStatusItem[]> {
-    const results = await Promise.all(
-      this.processes.map(async (proc) => {
-        const record = await proc.service.findByBatchNo(batchNo);
-        let status: ProcessStatusItem['status'] = 'not_entered';
-        let isDraft: boolean | null = null;
-        let recordStatus: number | null = null;
-        let updatedAt: string | null = null;
+    const unionQueries = this.processes.map(proc => {
+      const tableName = `${proc.key.replace(/-/g, '_')}_record`;
+      return `SELECT '${proc.key}' as processKey, is_draft as isDraft, record_status as recordStatus, updated_at as updatedAt FROM ${tableName} WHERE batch_no = @0`;
+    });
 
-        if (record) {
-          isDraft = record.isDraft;
-          recordStatus = record.recordStatus;
-          updatedAt = record.updatedAt ? record.updatedAt.toISOString() : null;
+    const fullQuery = unionQueries.join('\nUNION ALL\n');
+    const dbResults: any[] = await this.dataSource.query(fullQuery, [batchNo]);
+    const recordMap = new Map(dbResults.map(r => [r.processKey, r]));
 
-          if (recordStatus === 2) {
-            status = 'voided';
-          } else if (!isDraft) {
-            status = 'submitted';
-          } else {
-            status = 'draft';
-          }
+    return this.processes.map(proc => {
+      const record = recordMap.get(proc.key);
+      let status: ProcessStatusItem['status'] = 'not_entered';
+      let isDraft: boolean | null = null;
+      let recordStatus: number | null = null;
+      let updatedAt: string | null = null;
+
+      if (record) {
+        isDraft = record.isDraft;
+        recordStatus = record.recordStatus;
+        updatedAt = record.updatedAt ? new Date(record.updatedAt).toISOString() : null;
+
+        if (recordStatus === 2) {
+          status = 'voided';
+        } else if (!isDraft) {
+          status = 'submitted';
+        } else {
+          status = 'draft';
         }
+      }
 
-        return {
-          processKey: proc.key,
-          processName: proc.name,
-          route: proc.route,
-          status,
-          isDraft,
-          recordStatus,
-          updatedAt,
-        };
-      }),
-    );
-
-    return results;
+      return {
+        processKey: proc.key,
+        processName: proc.name,
+        route: proc.route,
+        status,
+        isDraft,
+        recordStatus,
+        updatedAt,
+      };
+    });
   }
 
   async getProcessRecords(batchNo: string): Promise<Record<string, any>> {
-    const entries = await Promise.all(
-      this.processes.map(async (proc) => {
-        const record = await proc.service.findByBatchNo(batchNo);
-        return [proc.key, record] as const;
-      }),
-    );
-    return Object.fromEntries(entries);
+    // 方案一：合并查询。利用 SQL Server 的 FOR JSON PATH 一次性获取所有记录，减少数据库往返次数
+    const queries = this.processes.map(proc => {
+      const tableName = `${proc.key.replace(/-/g, '_')}_record`;
+      // 使用子查询和 FOR JSON PATH 将每一行数据转为 JSON 字符串
+      return `SELECT '${proc.key}' as processKey, (SELECT * FROM ${tableName} WHERE batch_no = @0 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) as data`;
+    });
+
+    const fullQuery = queries.join('\nUNION ALL\n');
+    const dbResults: any[] = await this.dataSource.query(fullQuery, [batchNo]);
+    
+    const records: Record<string, any> = {};
+    for (const row of dbResults) {
+      if (row.data) {
+        const rawData = JSON.parse(row.data);
+        records[row.processKey] = this.convertToCamelCase(rawData);
+      } else {
+        records[row.processKey] = null;
+      }
+    }
+    
+    return records;
+  }
+
+  /**
+   * 将对象的所有键从 snake_case 转换为 camelCase
+   */
+  private convertToCamelCase(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map(v => this.convertToCamelCase(v));
+    } else if (obj !== null && obj.constructor === Object) {
+      return Object.keys(obj).reduce((result, key) => {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        result[camelKey] = this.convertToCamelCase(obj[key]);
+        return result;
+      }, {} as any);
+    }
+    return obj;
   }
 }

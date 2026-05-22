@@ -3,10 +3,15 @@ export interface FormField {
   label: string
   type?: 'text' | 'number' | 'select'
   required?: boolean
-  options?: Array<{ label: string; value: string | number }>
+  options?: any // Can be string (comma separated) or array
+  group?: string
+  unit?: string
+  min?: number | null
+  max?: number | null
+  defaultValue?: any
 }
 
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch, type Ref } from 'vue'
 import { get, post } from '@/api'
 
 export function useProcessApi(modulePath: string) {
@@ -27,8 +32,8 @@ export function useProcessApi(modulePath: string) {
 
 export function useProcessForm(
   basePath: string,
-  draftFields: FormField[],
-  qualityFields: FormField[],
+  draftFields: Ref<FormField[]>,
+  qualityFields: Ref<FormField[]>,
 ) {
   const loading = ref(false)
   const saving = ref(false)
@@ -36,10 +41,24 @@ export function useProcessForm(
   const error = ref('')
 
   const draftForm = reactive<Record<string, any>>({})
-  draftFields.forEach((f) => { draftForm[f.key] = '' })
-
   const qualityForm = reactive<Record<string, any>>({})
-  qualityFields.forEach((f) => { qualityForm[f.key] = '' })
+
+  // Watch for field changes to initialize form
+  watch(draftFields, (newFields) => {
+    newFields.forEach((f) => {
+      if (draftForm[f.key] === undefined) {
+        draftForm[f.key] = ''
+      }
+    })
+  }, { immediate: true })
+
+  watch(qualityFields, (newFields) => {
+    newFields.forEach((f) => {
+      if (qualityForm[f.key] === undefined) {
+        qualityForm[f.key] = ''
+      }
+    })
+  }, { immediate: true })
 
   const api = useProcessApi(basePath)
 
@@ -49,11 +68,19 @@ export function useProcessForm(
       const res = await api.getRecord(batchNo)
       record.value = res.data
       if (res.data) {
-        draftFields.forEach((f) => {
-          draftForm[f.key] = (res.data as any)[f.key] ?? ''
+        const allData = { ...res.data }
+        if (res.data.extraData) {
+          try {
+            const extra = JSON.parse(res.data.extraData)
+            Object.assign(allData, extra)
+          } catch (e) {}
+        }
+
+        draftFields.value.forEach((f) => {
+          draftForm[f.key] = allData[f.key] ?? ''
         })
-        qualityFields.forEach((f) => {
-          qualityForm[f.key] = (res.data as any)[f.key] ?? ''
+        qualityFields.value.forEach((f) => {
+          qualityForm[f.key] = allData[f.key] ?? ''
         })
       }
     } catch (e: any) {
@@ -68,6 +95,11 @@ export function useProcessForm(
   async function saveDraft(batchNo: string) {
     saving.value = true
     try {
+      // Split hardcoded fields and extraData
+      // Note: We don't strictly know which are hardcoded in the backend here, 
+      // but we can send the whole form and let the backend handle it if we update the backend.
+      // Alternatively, we can pass hardcoded keys as a prop.
+      // For now, let's send the whole form and update the backend to be smart.
       const res = await api.createDraft(batchNo, draftForm)
       record.value = res.data
     } catch (e: any) {
@@ -80,6 +112,9 @@ export function useProcessForm(
   async function submit(batchNo: string) {
     saving.value = true
     try {
+      // First save draft to ensure extraData is updated if any
+      await api.createDraft(batchNo, { ...draftForm, ...qualityForm })
+      
       const res = await api.submitQuality(batchNo, qualityForm)
       record.value = res.data
       return true

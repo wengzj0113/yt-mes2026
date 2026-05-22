@@ -5,6 +5,11 @@ import { SlittingRecord } from './slitting-record.entity';
 import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateSlittingDraftDto } from './dto/create-draft.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const SLITTING_ENTITY_FIELDS = [
+  'equipmentCode', 'electrodeWidth', 'electrodeLength', 'slittingSpeed', 'operatorName'
+];
 
 @Injectable()
 export class SlittingService {
@@ -30,24 +35,16 @@ export class SlittingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.electrodeWidth = dto.electrodeWidth;
-      existing.electrodeLength = dto.electrodeLength;
-      if (dto.slittingSpeed !== undefined) existing.slittingSpeed = dto.slittingSpeed;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, SLITTING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      electrodeWidth: dto.electrodeWidth,
-      electrodeLength: dto.electrodeLength,
-      slittingSpeed: dto.slittingSpeed,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, SLITTING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 

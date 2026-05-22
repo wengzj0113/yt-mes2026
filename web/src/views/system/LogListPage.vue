@@ -37,7 +37,7 @@ import { ref, onMounted } from 'vue'
 import { systemApi } from '@/api/system'
 import type { LogDto } from '@/types/api'
 
-const modules = ['用户管理', '角色管理', '部门管理', '设备管理', '批次管理', '工序管理', '系统配置']
+const modules = ['用户管理', '角色管理', '部门管理', '设备管理', '批次管理', '工序管理', '系统配置', '工序主数据', 'Pack管理']
 const moduleFilter = ref('')
 const list = ref<LogDto[]>([])
 const loading = ref(false)

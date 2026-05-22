@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ProcessStatusService } from './process-status.service';
 import { ProcessStatusController } from './process-status.controller';
+import { ProcessRecordSubscriber } from './process-record.subscriber';
 import { BatchingModule } from '../batching/batching.module';
 import { CoatingModule } from '../coating/coating.module';
 import { RollerPressingModule } from '../roller-pressing/roller-pressing.module';
@@ -31,7 +32,7 @@ import { GradingModule } from '../grading/grading.module';
     FormationModule,
     GradingModule,
   ],
-  providers: [ProcessStatusService],
+  providers: [ProcessStatusService, ProcessRecordSubscriber],
   controllers: [ProcessStatusController],
   exports: [ProcessStatusService],
 })

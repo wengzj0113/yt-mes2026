@@ -2,24 +2,24 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeor
 
 @Entity('batch_status_log')
 export class BatchStatusLog {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ length: 16 })
+  @Column({ name: 'batch_no', length: 16 })
   batchNo: string;
 
-  @Column({ type: 'tinyint', nullable: true })
+  @Column({ name: 'from_status', type: 'tinyint', nullable: true })
   fromStatus: number | null;
 
-  @Column({ type: 'tinyint' })
+  @Column({ name: 'to_status', type: 'tinyint' })
   toStatus: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'changed_by', type: 'int', nullable: true })
   changedBy: number | null;
 
-  @Column({ type: 'nvarchar', length: 200, nullable: true })
+  @Column({ name: 'change_reason', type: 'nvarchar', length: 200, nullable: true })
   changeReason: string | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

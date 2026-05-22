@@ -4,7 +4,7 @@
       <div class="page-header">
         <h3>质量检验 - {{ batchNo }}</h3>
         <el-space>
-          <el-button @click="$router.push(`/batches/${batchNo}`)">返回批次</el-button>
+          <el-button v-if="!props.batchNo" @click="$router.push(`/batches/${batchNo}`)">返回批次</el-button>
           <el-button type="primary" class="create-btn" @click="dialogVisible = true">创建检验</el-button>
         </el-space>
       </div>
@@ -71,15 +71,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { qualityApi } from '@/api/quality'
 import type { FormInstance } from 'element-plus'
 
 defineOptions({ name: 'QualityCheckPage' })
 
+const props = defineProps<{ batchNo?: string }>()
+const emit = defineEmits<{ (e: 'close'): void }>()
+
 const route = useRoute()
-const batchNo = route.params.batchNo as string
+const batchNo = computed(() => props.batchNo || (route.params.batchNo as string))
 
 const checks = ref<any[]>([])
 const loading = ref(false)
@@ -128,7 +131,7 @@ function formatDateTime(dateStr: string): string {
 async function loadChecks() {
   loading.value = true
   try {
-    const res = await qualityApi.list(batchNo)
+    const res = await qualityApi.list(batchNo.value)
     checks.value = res.data ?? []
   } catch {
     checks.value = []
@@ -163,7 +166,7 @@ async function handleSubmit() {
       payload.defectQty = form.defectQty
       payload.defectReason = form.defectReason.trim()
     }
-    await qualityApi.create(batchNo, payload)
+    await qualityApi.create(batchNo.value, payload)
     dialogVisible.value = false
     resetForm()
     await loadChecks()

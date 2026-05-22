@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 
 @Entity('process_dictionary')
 export class ProcessDictionary {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
   @Column({ unique: true, name: 'process_code' })
@@ -19,6 +19,9 @@ export class ProcessDictionary {
 
   @Column({ nullable: true, name: 'description' })
   description: string;
+
+  @Column({ type: 'nvarchar', length: 'max', nullable: true, name: 'field_definitions' })
+  fieldDefinitions: string; // Store JSON array of FormField objects
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

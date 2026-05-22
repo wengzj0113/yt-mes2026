@@ -8,21 +8,21 @@ import {
 
 @Entity('sys_department')
 export class Department {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ length: 100 })
+  @Column({ name: 'name', length: 100 })
   name: string;
 
-  @Column({ length: 20, unique: true })
+  @Column({ name: 'code', length: 20, unique: true })
   code: string;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean = true;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

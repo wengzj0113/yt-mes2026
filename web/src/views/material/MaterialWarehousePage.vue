@@ -4,7 +4,7 @@
       <div class="page-header">
         <h3>材料仓库 - {{ batchNo }}</h3>
         <div class="page-actions">
-          <el-button @click="$router.push(`/batches/${batchNo}`)">返回批次</el-button>
+          <el-button v-if="!props.batchNo" @click="$router.push(`/batches/${batchNo}`)">返回批次</el-button>
           <el-button type="primary" @click="showCreate = true">添加材料</el-button>
         </div>
       </div>
@@ -62,13 +62,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { materialApi } from '@/api/material'
 import type { MaterialDto } from '@/types/api'
 
+const props = defineProps<{ batchNo?: string }>()
+const emit = defineEmits<{ (e: 'close'): void }>()
+
 const route = useRoute()
-const batchNo = route.params.batchNo as string
+const batchNo = computed(() => props.batchNo || (route.params.batchNo as string))
 
 const list = ref<MaterialDto[]>([])
 const loading = ref(false)
@@ -104,7 +107,7 @@ function onTypeChange(val: number) {
 async function loadData() {
   loading.value = true
   try {
-    const res = await materialApi.list(batchNo)
+    const res = await materialApi.list(batchNo.value)
     list.value = res.data as MaterialDto[]
   } catch {
     list.value = []
@@ -122,7 +125,7 @@ async function handleCreate() {
   }
   saving.value = true
   try {
-    await materialApi.create(batchNo, {
+    await materialApi.create(batchNo.value, {
       ...form,
       materialType: form.materialType!,
       status: form.status,

@@ -5,6 +5,11 @@ import { SortingRecord } from './sorting-record.entity';
 import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateSortingDraftDto } from './dto/create-draft.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const SORTING_ENTITY_FIELDS = [
+  'equipmentCode', 'ocvVoltageRange', 'irRange', 'capacityRange', 'operatorName'
+];
 
 @Injectable()
 export class SortingService {
@@ -30,24 +35,16 @@ export class SortingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.ocvVoltageRange = dto.ocvVoltageRange;
-      existing.irRange = dto.irRange;
-      existing.capacityRange = dto.capacityRange;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, SORTING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      ocvVoltageRange: dto.ocvVoltageRange,
-      irRange: dto.irRange,
-      capacityRange: dto.capacityRange,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, SORTING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 

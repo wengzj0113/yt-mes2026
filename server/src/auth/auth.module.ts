@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
 import { UserModule } from '../user/user.module';
 
 @Module({
@@ -41,6 +42,10 @@ import { UserModule } from '../user/user.module';
         return new JwtAuthGuard(reflector);
       },
       inject: [Reflector],
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
   exports: [AuthService],

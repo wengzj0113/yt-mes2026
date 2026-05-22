@@ -6,6 +6,11 @@ import { Batch } from '../../batch/batch.entity';
 import { QualityCheck } from '../../quality/quality-check.entity';
 import { CreateGradingDraftDto } from './dto/create-draft.dto';
 import { SubmitGradingQualityDto } from './dto/submit-quality.dto';
+import { mergeExtraData } from '../../common/utils/process-record.util';
+
+const GRADING_ENTITY_FIELDS = [
+  'equipmentCode', 'chargeDischargeTemplate', 'gradingTemperature', 'capacityGradeStandard', 'operatorName'
+];
 
 @Injectable()
 export class GradingService {
@@ -31,18 +36,16 @@ export class GradingService {
 
     const existing = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (existing) {
-      existing.equipmentCode = dto.equipmentCode;
-      existing.operatorName = dto.operatorName;
+      mergeExtraData(existing, dto, GRADING_ENTITY_FIELDS);
       existing.updatedBy = userId;
       return this.repo.save(existing);
     }
 
     const record = this.repo.create({
       batchNo: dto.batchNo,
-      equipmentCode: dto.equipmentCode,
-      operatorName: dto.operatorName,
       createdBy: userId,
     });
+    mergeExtraData(record, dto, GRADING_ENTITY_FIELDS);
     return this.repo.save(record);
   }
 
@@ -53,6 +56,9 @@ export class GradingService {
     if (!record) {
       throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到分容草稿记录' });
     }
+
+    mergeExtraData(record, dto, GRADING_ENTITY_FIELDS);
+
     if (!record.equipmentCode || !record.operatorName) {
       throw new BadRequestException({
         code: 'PROCESS_FIELDS_INCOMPLETE',
@@ -60,9 +66,6 @@ export class GradingService {
       });
     }
 
-    record.chargeDischargeTemplate = dto.chargeDischargeTemplate;
-    record.gradingTemperature = dto.gradingTemperature;
-    record.capacityGradeStandard = dto.capacityGradeStandard;
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);

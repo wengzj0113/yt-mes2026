@@ -11,8 +11,7 @@ const http = axios.create({
 })
 
 // Vercel/Zeabur 预览环境或无后端环境开启 Mock
-const isPreview = import.meta.env.MODE === 'production' || 
-                 window.location.hostname.includes('vercel.app') ||
+const isPreview = window.location.hostname.includes('vercel.app') ||
                  window.location.hostname.includes('zeabur.app')
 
 http.interceptors.request.use((config) => {
@@ -77,6 +76,13 @@ http.interceptors.response.use(
     return res
   },
   async (err) => {
+    // 如果是登录请求报错，直接返回，不进入 401 自动跳转逻辑
+    if (err.config?.url?.includes('/auth/login')) {
+      const msg = err.response?.data?.message || '登录失败，请检查账号密码'
+      ElMessage.error(msg)
+      return Promise.reject(err)
+    }
+
     if (err.response?.status !== 401) {
       // Log full validation errors for debugging
       if (err.response?.data?.error?.fields) {

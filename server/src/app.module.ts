@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { redisStore } from 'cache-manager-redis-yet';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { DepartmentModule } from './department/department.module';
@@ -28,10 +31,35 @@ import { ProcessDictionaryModule } from './master-data/process-dictionary/proces
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SystemModule } from './system/system.module';
+import { PackModule } from './packs/pack.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const host = config.get('REDIS_HOST');
+        if (host) {
+          const store = await redisStore({
+            socket: {
+              host: host,
+              port: parseInt(config.get('REDIS_PORT', '6379'), 10),
+            },
+            password: config.get('REDIS_PASSWORD'),
+            ttl: 3600000, // 1 hour in ms
+          });
+          return { store };
+        }
+        // Fallback to in-memory if no Redis host is configured
+        return { ttl: 3600000 };
+      },
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -86,6 +114,13 @@ import { SystemModule } from './system/system.module';
     ProcessDictionaryModule,
     DashboardModule,
     SystemModule,
+    PackModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLogInterceptor,
+    },
   ],
 })
 export class AppModule {}

@@ -8,6 +8,8 @@ import { Department } from '../department/department.entity';
 import { Equipment } from '../equipment/equipment.entity';
 import { ProcessDictionary } from '../master-data/process-dictionary/process-dictionary.entity';
 import { SystemConfig } from '../system/entities/config.entity';
+import { Batch, BatchStatus } from '../batch/batch.entity';
+import { CellBarcode } from '../cells/cell-barcode.entity';
 
 @Injectable()
 export class SeedService {
@@ -22,6 +24,10 @@ export class SeedService {
     private readonly processDictRepo: Repository<ProcessDictionary>,
     @InjectRepository(SystemConfig)
     private readonly systemConfigRepo: Repository<SystemConfig>,
+    @InjectRepository(Batch)
+    private readonly batchRepo: Repository<Batch>,
+    @InjectRepository(CellBarcode)
+    private readonly cellRepo: Repository<CellBarcode>,
     private readonly configService: ConfigService,
   ) {}
 
@@ -31,7 +37,58 @@ export class SeedService {
     await this.seedEquipment();
     await this.seedProcessDictionary();
     await this.seedSystemConfig();
+    await this.seedMockBatches();
     console.log('Seed completed successfully.');
+  }
+
+  private async seedMockBatches() {
+    const mockBatches = [
+      { no: 'B20260520001', model: 'LP27148200-50Ah', spec: '3.2V 50Ah LFP', qty: 1000 },
+      { no: 'B20260520002', model: 'LP27148200-100Ah', spec: '3.2V 100Ah LFP', qty: 500 },
+      { no: 'B20260520003', model: 'NCM811-60Ah', spec: '3.7V 60Ah NCM', qty: 800 },
+      { no: 'B20260520004', model: 'NCM811-120Ah', spec: '3.7V 120Ah NCM', qty: 400 },
+      { no: 'B20260520005', model: 'LFP-Blade-150Ah', spec: '3.2V 150Ah Blade', qty: 300 },
+    ];
+
+    for (const item of mockBatches) {
+      let batch = await this.batchRepo.findOne({ where: { batchNo: item.no } });
+      if (!batch) {
+        batch = this.batchRepo.create({
+          batchNo: item.no,
+          productModel: item.model,
+          productSpec: item.spec,
+          workshop: '一号车间',
+          shift: '白班',
+          plannedQty: item.qty,
+          actualStartDate: new Date(),
+          status: BatchStatus.IN_PROGRESS,
+          createdBy: 1
+        });
+        await this.batchRepo.save(batch);
+        console.log(`Created mock batch: ${item.no}`);
+
+        // Seed some cells for each batch to make trace useful
+        const mockCells = [];
+        const grades = ['A', 'A', 'A', 'B', 'A'];
+        for (let i = 1; i <= 5; i++) {
+          const sn = `SN${item.no}${i.toString().padStart(3, '0')}`;
+          const cell = this.cellRepo.create({
+            barcode: sn,
+            batchNo: item.no,
+            voltage: 3.2 + Math.random() * 0.1,
+            internalResistance: 0.5 + Math.random() * 0.2,
+            capacity: (item.qty > 500 ? 50000 : 100000) + Math.random() * 500,
+            kValue: 0.01 + Math.random() * 0.005,
+            grade: grades[i - 1],
+            sortingTime: new Date(),
+            importSource: 'mock_seed'
+          });
+          mockCells.push(cell);
+        }
+        await this.cellRepo.save(mockCells);
+        console.log(`  Seeded 5 mock cells for batch ${item.no}`);
+      }
+    }
   }
 
   private async seedSystemConfig() {
