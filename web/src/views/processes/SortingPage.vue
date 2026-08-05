@@ -9,18 +9,15 @@
   />
 </template>
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import ProcessFormPage from './ProcessFormPage.vue'
+import { createStandardParameterFields } from './standardParameterFields'
 import type { FormField } from './useProcess'
 
 const props = defineProps<{ batchNo?: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
+const authStore = useAuthStore()
 
-const draftFields: FormField[] = [
-  { key: 'equipmentCode', label: '设备编号' },
-  { key: 'ocvVoltageRange', label: 'OCV电压范围' },
-  { key: 'irRange', label: '内阻范围' },
-  { key: 'capacityRange', label: '容量范围' },
-  { key: 'operatorName', label: '操作员' },
-]
+const draftFields: FormField[] = createStandardParameterFields(authStore.user?.realName ?? '')
 const qualityFields: FormField[] = []
 </script>
