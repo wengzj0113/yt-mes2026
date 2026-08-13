@@ -46,7 +46,8 @@ describe('ProcessDictionaryService', () => {
         isActive: true,
         fieldDefinitions: JSON.stringify([
           { ...batching.fieldDefinitions[0], label: '旧正极材料', type: 'text', min: 1, max: 9, defaultValue: 'NCM-OLD' },
-          { key: 'obsolete', label: '旧参数', type: 'number', required: false, min: 0, max: 10 },
+          { key: 'obsolete', label: '旧系统参数', type: 'number', required: false, isSystem: true, min: 0, max: 10 },
+          { key: 'custom', label: '用户自定义参数', type: 'text', required: false, defaultValue: '保留' },
         ]),
       }];
       repo.find.mockResolvedValue(processes);
@@ -63,7 +64,11 @@ describe('ProcessDictionaryService', () => {
         defaultValue: 'NCM-OLD',
       }));
       expect(fields.some((field: any) => field.key === 'obsolete')).toBe(false);
-      expect(fields.map((field: any) => field.key)).toEqual(batching.fieldDefinitions.map((field) => field.key));
+      expect(fields.find((field: any) => field.key === 'custom')).toEqual(expect.objectContaining({ defaultValue: '保留' }));
+      expect(fields.map((field: any) => field.key)).toEqual([
+        ...batching.fieldDefinitions.map((field) => field.key),
+        'custom',
+      ]);
     });
 
     it('keeps dedicated OCV fields separate from Excel-based sorting fields', async () => {

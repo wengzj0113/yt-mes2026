@@ -34,7 +34,8 @@ export function mergeFieldDefinitionsWithBaseline(
     }
   }
   const existingByKey = new Map(existingFields.map((field) => [String(field.key), field]));
-  return baselineFields.map((baseline) => {
+  const baselineKeys = new Set(baselineFields.map((field) => String(field.key)));
+  const merged: Array<Record<string, unknown>> = baselineFields.map((baseline) => {
     const configured = existingByKey.get(String(baseline.key));
     if (!configured) return { ...baseline };
     const preservedConfiguration = Object.fromEntries(
@@ -42,6 +43,9 @@ export function mergeFieldDefinitionsWithBaseline(
     );
     return { ...baseline, ...preservedConfiguration };
   });
+  return merged.concat(existingFields.filter((field) => (
+    !baselineKeys.has(String(field.key)) && field.isSystem !== true
+  )));
 }
 
 const text = (key: string, label: string, group = '工艺参数'): ProcessFieldDefinition => ({
