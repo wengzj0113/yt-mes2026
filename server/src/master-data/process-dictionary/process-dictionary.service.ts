@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Like } from 'typeorm';
 import { ProcessDictionary } from './process-dictionary.entity';
-import { OCV_PROCESS_FIELDS, PROCESS_BASELINE } from '../process-baseline';
+import { mergeFieldDefinitionsWithBaseline, OCV_PROCESS_FIELDS, PROCESS_BASELINE } from '../process-baseline';
 
 @Injectable()
 export class ProcessDictionaryService implements OnModuleInit {
@@ -18,7 +18,7 @@ export class ProcessDictionaryService implements OnModuleInit {
     const byCode = new Map(processes.map((process) => [process.processCode, process]));
     for (const definition of PROCESS_BASELINE) {
       const existing = byCode.get(definition.processCode);
-      const fields = JSON.stringify(definition.fieldDefinitions);
+      const fields = JSON.stringify(mergeFieldDefinitionsWithBaseline(existing?.fieldDefinitions, definition.fieldDefinitions));
       if (!existing) {
         await this.processDictRepo.save(this.processDictRepo.create({ ...definition, fieldDefinitions: fields }));
         continue;
@@ -40,7 +40,7 @@ export class ProcessDictionaryService implements OnModuleInit {
       { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 128, isActive: true },
     ]) {
       const existing = byCode.get(definition.processCode);
-      const fieldDefinitions = JSON.stringify(OCV_PROCESS_FIELDS);
+      const fieldDefinitions = JSON.stringify(mergeFieldDefinitionsWithBaseline(existing?.fieldDefinitions, OCV_PROCESS_FIELDS));
       if (!existing) await this.processDictRepo.save(this.processDictRepo.create({ ...definition, fieldDefinitions }));
       else if (existing.processName !== definition.processName || existing.sortOrder !== definition.sortOrder || existing.fieldDefinitions !== fieldDefinitions || !existing.isActive) await this.processDictRepo.save(Object.assign(existing, { ...definition, fieldDefinitions }));
     }

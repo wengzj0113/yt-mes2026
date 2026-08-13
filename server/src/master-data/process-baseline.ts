@@ -18,6 +18,32 @@ export interface ProcessBaselineItem {
   fieldDefinitions: ProcessFieldDefinition[];
 }
 
+const RAW_FIELD_KEYS = new Set(['group', 'key', 'label', 'unit', 'type', 'isSystem']);
+
+export function mergeFieldDefinitionsWithBaseline(
+  existingJson: string | null | undefined,
+  baselineFields: readonly { key: string }[],
+): Array<Record<string, unknown>> {
+  let existingFields: Array<Record<string, unknown>> = [];
+  if (existingJson) {
+    try {
+      const parsed = JSON.parse(existingJson);
+      if (Array.isArray(parsed)) existingFields = parsed.filter((field) => field && typeof field === 'object');
+    } catch {
+      existingFields = [];
+    }
+  }
+  const existingByKey = new Map(existingFields.map((field) => [String(field.key), field]));
+  return baselineFields.map((baseline) => {
+    const configured = existingByKey.get(String(baseline.key));
+    if (!configured) return { ...baseline };
+    const preservedConfiguration = Object.fromEntries(
+      Object.entries(configured).filter(([key]) => !RAW_FIELD_KEYS.has(key)),
+    );
+    return { ...baseline, ...preservedConfiguration };
+  });
+}
+
 const text = (key: string, label: string, group = '工艺参数'): ProcessFieldDefinition => ({
   group, key, label, type: 'text', required: true, isSystem: true,
 });

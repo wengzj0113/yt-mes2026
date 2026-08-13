@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ProcessDictionary } from './process-dictionary.entity';
 import { DataSource } from 'typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { getProcessBaseline } from '../process-baseline';
 
 describe('ProcessDictionaryService', () => {
   let service: ProcessDictionaryService;
@@ -36,6 +37,35 @@ describe('ProcessDictionaryService', () => {
   });
 
   describe('standard OCV fields', () => {
+    it('merges Excel raw fields while preserving existing parameter configuration', async () => {
+      const batching = getProcessBaseline('batching')!;
+      const processes: any[] = [{
+        processCode: 'batching',
+        processName: '配料',
+        sortOrder: 99,
+        isActive: true,
+        fieldDefinitions: JSON.stringify([
+          { ...batching.fieldDefinitions[0], label: '旧正极材料', type: 'text', min: 1, max: 9, defaultValue: 'NCM-OLD' },
+          { key: 'obsolete', label: '旧参数', type: 'number', required: false, min: 0, max: 10 },
+        ]),
+      }];
+      repo.find.mockResolvedValue(processes);
+
+      await service.onModuleInit();
+
+      const fields = JSON.parse(processes[0].fieldDefinitions);
+      const positiveMaterial = fields.find((field: any) => field.key === batching.fieldDefinitions[0].key);
+      expect(positiveMaterial).toEqual(expect.objectContaining({
+        label: batching.fieldDefinitions[0].label,
+        type: batching.fieldDefinitions[0].type,
+        min: 1,
+        max: 9,
+        defaultValue: 'NCM-OLD',
+      }));
+      expect(fields.some((field: any) => field.key === 'obsolete')).toBe(false);
+      expect(fields.map((field: any) => field.key)).toEqual(batching.fieldDefinitions.map((field) => field.key));
+    });
+
     it('keeps dedicated OCV fields separate from Excel-based sorting fields', async () => {
       const processes: any[] = [
         { processCode: 'sorting', fieldDefinitions: null },

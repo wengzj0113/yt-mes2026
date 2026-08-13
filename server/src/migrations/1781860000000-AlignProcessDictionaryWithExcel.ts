@@ -1,10 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { PROCESS_BASELINE } from '../master-data/process-baseline';
+import { mergeFieldDefinitionsWithBaseline, PROCESS_BASELINE } from '../master-data/process-baseline';
 
 export class AlignProcessDictionaryWithExcel1781860000000 implements MigrationInterface {
   async up(queryRunner: QueryRunner): Promise<void> {
+    const existingRows = await queryRunner.query('SELECT process_code, field_definitions FROM process_dictionary');
+    const existingByCode = new Map<string, string | null>(existingRows.map((row: any) => [row.process_code, row.field_definitions]));
     for (const definition of PROCESS_BASELINE) {
-      const fieldDefinitions = JSON.stringify(definition.fieldDefinitions).replace(/'/g, "''");
+      const fieldDefinitions = JSON.stringify(mergeFieldDefinitionsWithBaseline(existingByCode.get(definition.processCode), definition.fieldDefinitions)).replace(/'/g, "''");
       const processName = definition.processName.replace(/'/g, "''");
       await queryRunner.query(`
         IF EXISTS (SELECT 1 FROM process_dictionary WHERE process_code = '${definition.processCode}')

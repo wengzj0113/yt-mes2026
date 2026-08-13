@@ -10,7 +10,7 @@ import { ProcessDictionary } from '../master-data/process-dictionary/process-dic
 import { SystemConfig } from '../system/entities/config.entity';
 import { Batch, BatchStatus } from '../batch/batch.entity';
 import { CellBarcode } from '../cells/cell-barcode.entity';
-import { PROCESS_BASELINE } from '../master-data/process-baseline';
+import { mergeFieldDefinitionsWithBaseline, PROCESS_BASELINE } from '../master-data/process-baseline';
 
 @Injectable()
 export class SeedService {
@@ -186,7 +186,10 @@ export class SeedService {
     ]);
     for (const definition of PROCESS_BASELINE) {
       const existing = await this.processDictRepo.findOne({ where: { processCode: definition.processCode } });
-      const data = { ...definition, fieldDefinitions: JSON.stringify(definition.fieldDefinitions) };
+      const data = {
+        ...definition,
+        fieldDefinitions: JSON.stringify(mergeFieldDefinitionsWithBaseline(existing?.fieldDefinitions, definition.fieldDefinitions)),
+      };
       if (existing) await this.processDictRepo.save(Object.assign(existing, data));
       else await this.processDictRepo.save(this.processDictRepo.create(data));
     }
