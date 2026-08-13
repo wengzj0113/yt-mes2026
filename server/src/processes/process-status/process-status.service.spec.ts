@@ -13,6 +13,10 @@ import { InjectionService } from '../injection/injection.service';
 import { WrappingService } from '../wrapping/wrapping.service';
 import { FormationService } from '../formation/formation.service';
 import { GradingService } from '../grading/grading.service';
+import { DataSource } from 'typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { QualityCheck } from '../../quality/quality-check.entity';
+import { ProcessParameter } from '../../process-parameters/process-parameter.entity';
 
 describe('ProcessStatusService', () => {
   let service: ProcessStatusService;
@@ -48,6 +52,9 @@ describe('ProcessStatusService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProcessStatusService,
+        { provide: DataSource, useValue: { query: jest.fn().mockResolvedValue([]) } },
+        { provide: getRepositoryToken(QualityCheck), useValue: { find: jest.fn().mockResolvedValue([]) } },
+        { provide: getRepositoryToken(ProcessParameter), useValue: { find: jest.fn().mockResolvedValue([]) } },
         ...providers,
       ],
     }).compile();
@@ -67,7 +74,7 @@ describe('ProcessStatusService', () => {
 
     const result = await service.getProcessStatuses('BATCH001');
 
-    expect(result).toHaveLength(13);
+    expect(result).toHaveLength(16);
     result.forEach((item) => {
       expect(item.status).toBe('not_entered');
       expect(item.isDraft).toBeNull();
@@ -86,7 +93,7 @@ describe('ProcessStatusService', () => {
     expect(names).toContain('配料');
     expect(names).toContain('涂布');
     expect(names).toContain('辊压');
-    expect(names).toContain('分容');
+    expect(names).toContain('封口');
   });
 
   it('should detect draft status correctly', async () => {
@@ -106,7 +113,7 @@ describe('ProcessStatusService', () => {
     const result = await service.getProcessStatuses('BATCH001');
 
     const batching = result.find((r) => r.processKey === 'batching');
-    expect(batching?.status).toBe('draft');
+    expect(batching?.status).toBe('saved');
     expect(batching?.isDraft).toBe(true);
     expect(batching?.recordStatus).toBe(1);
     expect(batching?.updatedAt).toBe('2026-05-12T10:00:00.000Z');
@@ -131,7 +138,7 @@ describe('ProcessStatusService', () => {
 
     const result = await service.getProcessStatuses('BATCH001');
     const batching = result.find((r) => r.processKey === 'batching');
-    expect(batching?.status).toBe('submitted');
+    expect(batching?.status).toBe('pending_quality');
   });
 
   it('should detect voided status correctly', async () => {
@@ -154,21 +161,21 @@ describe('ProcessStatusService', () => {
   it('should handle mixed states correctly', async () => {
     mockServices['BatchingService'].findByBatchNo.mockResolvedValue({ isDraft: false, recordStatus: 1 }); // submitted
     mockServices['CoatingService'].findByBatchNo.mockResolvedValue({ isDraft: true, recordStatus: 1 }); // draft
-    mockServices['GradingService'].findByBatchNo.mockResolvedValue({ isDraft: false, recordStatus: 2 }); // voided
+    mockServices['WrappingService'].findByBatchNo.mockResolvedValue({ isDraft: false, recordStatus: 2 }); // voided
     // All others not entered
     Object.entries(mockServices).forEach(([name, mock]: [string, any]) => {
-      if (!['BatchingService', 'CoatingService', 'GradingService'].includes(name)) {
+      if (!['BatchingService', 'CoatingService', 'WrappingService'].includes(name)) {
         mock.findByBatchNo.mockResolvedValue(null);
       }
     });
 
     const result = await service.getProcessStatuses('BATCH001');
 
-    expect(result.find((r) => r.processKey === 'batching')?.status).toBe('submitted');
-    expect(result.find((r) => r.processKey === 'coating')?.status).toBe('draft');
-    expect(result.find((r) => r.processKey === 'grading')?.status).toBe('voided');
+    expect(result.find((r) => r.processKey === 'batching')?.status).toBe('pending_quality');
+    expect(result.find((r) => r.processKey === 'coating')?.status).toBe('saved');
+    expect(result.find((r) => r.processKey === 'wrapping')?.status).toBe('voided');
     result
-      .filter((r) => !['batching', 'coating', 'grading'].includes(r.processKey))
+      .filter((r) => !['batching', 'coating', 'wrapping'].includes(r.processKey))
       .forEach((item) => {
         expect(item.status).toBe('not_entered');
       });
@@ -184,8 +191,8 @@ describe('ProcessStatusService', () => {
 
     expect(keys).toEqual([
       'batching', 'coating', 'roller-pressing', 'slitting',
-      'electrode', 'winding', 'assembly', 'baking', 'injection',
-      'wrapping', 'formation', 'grading', 'sorting',
+      'electrode', 'winding', 'assembly', 'casing', 'integrated-machine',
+      'laser-welding', 'baking', 'injection', 'wrapping', 'ocv1', 'ocv2', 'sorting',
     ]);
   });
 
@@ -197,7 +204,7 @@ describe('ProcessStatusService', () => {
     await service.getProcessStatuses('TEST_BATCH');
 
     Object.values(mockServices).forEach((mock: any) => {
-      expect(mock.findByBatchNo).toHaveBeenCalledWith('TEST_BATCH');
+      if (mockServices.BatchingService === mock || mockServices.CoatingService === mock || mockServices.RollerPressingService === mock || mockServices.SlittingService === mock || mockServices.SortingService === mock || mockServices.ElectrodeService === mock || mockServices.WindingService === mock || mockServices.AssemblyService === mock || mockServices.BakingService === mock || mockServices.InjectionService === mock || mockServices.WrappingService === mock) expect(mock.findByBatchNo).toHaveBeenCalledWith('TEST_BATCH');
     });
   });
 
@@ -236,7 +243,7 @@ describe('ProcessStatusService', () => {
       expect(result.batching).toEqual(batchingRecord);
       expect(result.coating).toEqual(coatingRecord);
       expect(result['roller-pressing']).toBeNull();
-      expect(Object.keys(result).length).toBe(13);
+      expect(Object.keys(result).length).toBe(16);
     });
   });
 });

@@ -125,6 +125,9 @@ import GradingPage from '../processes/GradingPage.vue'
 import Ocv1Page from '../processes/Ocv1Page.vue'
 import Ocv2Page from '../processes/Ocv2Page.vue'
 import SortingPage from '../processes/SortingPage.vue'
+import CasingPage from '../processes/CasingPage.vue'
+import IntegratedMachinePage from '../processes/IntegratedMachinePage.vue'
+import LaserWeldingPage from '../processes/LaserWeldingPage.vue'
 import QualityCheckPage from '../quality/QualityCheckPage.vue'
 import MaterialWarehousePage from '../material/MaterialWarehousePage.vue'
 
@@ -148,6 +151,9 @@ const componentMap: Record<string, any> = {
   'electrode': ElectrodePage,
   'winding': WindingPage,
   'assembly': AssemblyPage,
+  'casing': CasingPage,
+  'integrated-machine': IntegratedMachinePage,
+  'laser-welding': LaserWeldingPage,
   'baking': BakingPage,
   'injection': InjectionPage,
   'wrapping': WrappingPage,

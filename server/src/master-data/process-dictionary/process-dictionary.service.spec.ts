@@ -36,7 +36,7 @@ describe('ProcessDictionaryService', () => {
   });
 
   describe('standard OCV fields', () => {
-    it('uses the same parameter definitions for OCV1, OCV2, and sorting', async () => {
+    it('keeps dedicated OCV fields separate from Excel-based sorting fields', async () => {
       const processes: any[] = [
         { processCode: 'sorting', fieldDefinitions: null },
         { processCode: 'ocv1', fieldDefinitions: null },
@@ -49,14 +49,16 @@ describe('ProcessDictionaryService', () => {
       const fieldsByCode = new Map(
         processes.map((process) => [process.processCode, JSON.parse(process.fieldDefinitions)]),
       );
-      expect(fieldsByCode.get('ocv1')).toEqual(fieldsByCode.get('sorting'));
-      expect(fieldsByCode.get('ocv2')).toEqual(fieldsByCode.get('sorting'));
       expect(fieldsByCode.get('ocv1')).toEqual(expect.arrayContaining([
         expect.objectContaining({ key: 'equipmentCode', type: 'text', required: true, isSystem: true }),
-        expect.objectContaining({ key: 'ocvVoltageRange', type: 'range', minKey: 'ocvVoltageMin', maxKey: 'ocvVoltageMax' }),
-        expect.objectContaining({ key: 'irRange', type: 'range', minKey: 'irMin', maxKey: 'irMax' }),
-        expect.objectContaining({ key: 'capacityRange', type: 'range', minKey: 'capacityMin', maxKey: 'capacityMax' }),
+        expect.objectContaining({ key: 'ocvVoltageRange', unit: 'V' }),
+        expect.objectContaining({ key: 'irRange', unit: 'mΩ' }),
+        expect.objectContaining({ key: 'capacityRange', unit: 'mAh' }),
         expect.objectContaining({ key: 'operatorName', type: 'text', required: true, isSystem: true }),
+      ]));
+      expect(fieldsByCode.get('sorting')).toEqual(expect.arrayContaining([
+        expect.objectContaining({ key: 'internalResistanceRange', label: '内阻电压范围（内阻）', unit: 'mΩ' }),
+        expect.objectContaining({ key: 'voltageRange', label: '内阻电压范围（电压）', unit: 'V' }),
       ]));
     });
 

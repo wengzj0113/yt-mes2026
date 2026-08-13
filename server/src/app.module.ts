@@ -37,6 +37,7 @@ import { RolesGuard } from './auth/roles.guard';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 import { ProcessParameterModule } from './process-parameters/process-parameter.module';
+import { ProcessDynamicModule } from './process-dynamic/process-dynamic.module';
 
 @Module({
   imports: [
@@ -121,6 +122,7 @@ import { ProcessParameterModule } from './process-parameters/process-parameter.m
     SystemModule,
     PackModule,
     ProcessParameterModule,
+    ProcessDynamicModule,
   ],
   providers: [
     {

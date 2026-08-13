@@ -10,6 +10,7 @@ import { ProcessDictionary } from '../master-data/process-dictionary/process-dic
 import { SystemConfig } from '../system/entities/config.entity';
 import { Batch, BatchStatus } from '../batch/batch.entity';
 import { CellBarcode } from '../cells/cell-barcode.entity';
+import { PROCESS_BASELINE } from '../master-data/process-baseline';
 
 @Injectable()
 export class SeedService {
@@ -166,12 +167,6 @@ export class SeedService {
   }
 
   private async seedProcessDictionary() {
-    const count = await this.processDictRepo.count();
-    if (count > 0) {
-      console.log('Process Dictionary already seeded, skipping.');
-      return;
-    }
-
     const processes = this.processDictRepo.create([
       { processCode: 'batching', processName: '配料', sortOrder: 10, isActive: true },
       { processCode: 'coating', processName: '涂布', sortOrder: 20, isActive: true },
@@ -189,7 +184,19 @@ export class SeedService {
       { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 128, isActive: true },
       { processCode: 'sorting', processName: '分选', sortOrder: 130, isActive: true },
     ]);
-    await this.processDictRepo.save(processes);
-    console.log(`Seeded ${processes.length} process dictionary records.`);
+    for (const definition of PROCESS_BASELINE) {
+      const existing = await this.processDictRepo.findOne({ where: { processCode: definition.processCode } });
+      const data = { ...definition, fieldDefinitions: JSON.stringify(definition.fieldDefinitions) };
+      if (existing) await this.processDictRepo.save(Object.assign(existing, data));
+      else await this.processDictRepo.save(this.processDictRepo.create(data));
+    }
+    for (const legacyCode of ['formation', 'grading']) {
+      const legacy = await this.processDictRepo.findOne({ where: { processCode: legacyCode } });
+      if (legacy?.isActive) {
+        legacy.isActive = false;
+        await this.processDictRepo.save(legacy);
+      }
+    }
+    console.log(`Aligned ${PROCESS_BASELINE.length} process dictionary records.`);
   }
 }

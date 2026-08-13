@@ -1,0 +1,5 @@
+import { MigrationInterface, QueryRunner } from 'typeorm';
+export class CreateProcessDynamicRecord1781870000000 implements MigrationInterface {
+  async up(queryRunner: QueryRunner) { await queryRunner.query(`IF OBJECT_ID('process_dynamic_record', 'U') IS NULL BEGIN CREATE TABLE process_dynamic_record (id INT IDENTITY(1,1) PRIMARY KEY, batch_no NVARCHAR(16) NOT NULL, process_code NVARCHAR(32) NOT NULL, extra_data NVARCHAR(MAX) NULL, record_status INT NOT NULL CONSTRAINT DF_process_dynamic_record_status DEFAULT 1, is_draft BIT NOT NULL CONSTRAINT DF_process_dynamic_record_draft DEFAULT 1, created_by INT NULL, created_at DATETIME2 NOT NULL CONSTRAINT DF_process_dynamic_record_created DEFAULT SYSUTCDATETIME(), updated_by INT NULL, updated_at DATETIME2 NOT NULL CONSTRAINT DF_process_dynamic_record_updated DEFAULT SYSUTCDATETIME(), CONSTRAINT UQ_process_dynamic_record_batch_process UNIQUE(batch_no, process_code)); END`); }
+  async down(_queryRunner: QueryRunner) { /* Keep historical dynamic records; rollback is intentionally non-destructive. */ }
+}

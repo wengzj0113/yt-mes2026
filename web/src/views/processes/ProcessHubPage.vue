@@ -76,6 +76,9 @@ import GradingPage from './GradingPage.vue';
 import Ocv1Page from './Ocv1Page.vue';
 import Ocv2Page from './Ocv2Page.vue';
 import SortingPage from './SortingPage.vue';
+import CasingPage from './CasingPage.vue';
+import IntegratedMachinePage from './IntegratedMachinePage.vue';
+import LaserWeldingPage from './LaserWeldingPage.vue';
 
 const processComponents: Record<string, any> = {
   'batching': BatchingPage,
@@ -85,6 +88,9 @@ const processComponents: Record<string, any> = {
   'electrode': ElectrodePage,
   'winding': WindingPage,
   'assembly': AssemblyPage,
+  'casing': CasingPage,
+  'integrated-machine': IntegratedMachinePage,
+  'laser-welding': LaserWeldingPage,
   'baking': BakingPage,
   'injection': InjectionPage,
   'wrapping': WrappingPage,
