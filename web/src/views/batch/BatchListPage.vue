@@ -23,7 +23,11 @@
             <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
+        <el-table-column prop="createdAt" label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="240">
           <template #default="{ row }">
             <el-button size="small" @click.stop="goDetail(row)">详情</el-button>
@@ -106,6 +110,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { batchApi } from '@/api/batch'
 import { masterDataApi } from '@/api/master-data'
+import { formatDateTime } from '@/composables/datetime'
 import type { BatchDto } from '@/types/api'
 
 const router = useRouter()
@@ -133,6 +138,7 @@ const form = reactive({
   plannedQty: 1,
   actualStartDate: '',
 })
+
 const rules = {
   batchNo: [{ required: true, message: '请输入批次号', trigger: 'blur' }],
   productModel: [{ required: true, message: '请输入产品型号', trigger: 'blur' }],
@@ -158,7 +164,7 @@ async function loadData() {
     if (!showClosed.value) params.excludeStatus = 4
     const res = await batchApi.list(params)
     list.value = res.data.items
-    total.value = res.data.meta?.total ?? 0
+    total.value = res.meta?.total ?? 0
   } catch {
     list.value = []
     total.value = 0

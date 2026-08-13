@@ -127,6 +127,10 @@
             <div class="kpi-item__val">{{ result.cell.capacity }}<small>mAh</small></div>
             <div class="kpi-item__lab">放电容量</div>
           </div>
+          <div v-if="mode === 'barcode' && result" class="kpi-item">
+            <div class="kpi-item__val">{{ formatKValue(result.cell.kValue) }}</div>
+            <div class="kpi-item__lab">K值</div>
+          </div>
           <!-- Batch Mode KPI -->
           <div v-if="mode === 'batch' && batchInfo" class="kpi-item">
             <div class="kpi-item__val">{{ batchInfo.batchNo }}</div>
@@ -149,39 +153,86 @@
           </div>
 
           <div class="passport-body">
-            <!-- Process Cards Flow -->
-            <div class="process-cards-grid">
-              <div 
-                v-for="proc in processList.filter(p => p.status !== 'not_entered')" 
-                :key="proc.key" 
-                class="minimal-card process-detail-card"
-              >
-                <div class="card-header">
-                  <div class="header-left">
-                    <span class="step-num">{{ PROCESS_ORDER.findIndex(x => x.key === proc.key) + 1 }}</span>
-                    <span class="step-name">{{ proc.name }}</span>
+            <!-- 进度条 + 模式切换 -->
+            <div class="process-progress-bar">
+              <div class="progress-info">
+                <span class="progress-text">{{ completedSteps }}/{{ totalSteps }} 工序已完成</span>
+                <div class="progress-track">
+                  <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+                  <div class="progress-segments">
+                    <span
+                      v-for="(p, i) in processList"
+                      :key="p.key"
+                      class="segment-dot"
+                      :class="`seg-${p.status}`"
+                      :title="`${i+1}. ${p.name}`"
+                    ></span>
                   </div>
+                </div>
+                <span class="progress-percent">{{ progressPercent }}%</span>
+              </div>
+              <div class="view-toggle">
+                <button class="toggle-btn" :class="{ active: cardViewMode === 'overview' }" @click="switchToOverview">概览</button>
+                <button class="toggle-btn" :class="{ active: cardViewMode === 'focus' }" @click="cardViewMode = 'focus'; focusedProcessKey = focusedProcessKey || visibleProcessList[0]?.key || null">聚焦</button>
+              </div>
+            </div>
+
+            <!-- 横向流程卡片 -->
+            <div class="process-cards-flow">
+              <div
+                v-for="proc in visibleProcessList"
+                :key="proc.key"
+                class="process-flow-card"
+                :class="{
+                  expanded: cardViewMode === 'focus' && focusedProcessKey === proc.key,
+                  dimmed: cardViewMode === 'focus' && focusedProcessKey !== proc.key
+                }"
+                @click="toggleFocus(proc.key)"
+              >
+                <div class="flow-card-header">
+                  <span class="flow-step-num">{{ PROCESS_ORDER.findIndex(x => x.key === proc.key) + 1 }}</span>
+                  <span class="flow-step-name">{{ proc.name }}</span>
                   <el-tag size="small" :type="stepTag(proc)" round>{{ stepLabel(proc) }}</el-tag>
                 </div>
-                <div class="process-params">
-                  <div v-for="field in getProcessFields(proc)" :key="field.key" class="param-item">
-                    <label>{{ field.label }}</label>
-                    <span>{{ field.value }}</span>
+
+                <!-- 概览模式：竖排参数（紧凑） -->
+                <div v-if="cardViewMode !== 'focus' || focusedProcessKey !== proc.key" class="flow-card-params-compact">
+                  <div v-for="field in getProcessFields(proc).slice(0, 5)" :key="field.key" class="flow-param">
+                    <span class="flow-param-label">{{ field.label }}</span>
+                    <span class="flow-param-value">{{ field.value }}</span>
+                  </div>
+                  <div v-if="getProcessFields(proc).length > 5" class="flow-param-more">
+                    +{{ getProcessFields(proc).length - 5 }} 项参数
                   </div>
                 </div>
-                <div class="process-footer">
-                  <span>操作员: {{ proc.record.operatorName || '系统' }}</span>
-                  <span class="footer-time">{{ formatTimeShort(proc.record.createdAt) }}</span>
+
+                <!-- 聚焦模式：全部分组参数 -->
+                <div v-else class="flow-card-params-full">
+                  <template v-for="group in getProcessGroupedFields(proc)" :key="group.title">
+                    <div class="flow-param-group-title">{{ group.title }}</div>
+                    <div class="flow-param-group">
+                      <div v-for="field in group.fields" :key="field.key" class="flow-param">
+                        <span class="flow-param-label">{{ field.label }}</span>
+                        <span class="flow-param-value">{{ field.value }}</span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
+                <div class="flow-card-footer">
+                  <span>{{ proc.record.operatorName || '系统' }}</span>
+                  <span>{{ formatTimeShort(proc.record.createdAt) }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- Raw Material Trace Section -->
+            <!-- 原材料追溯（可折叠） -->
             <section class="minimal-card material-trace-card">
-              <div class="card-header">
+              <div class="card-header material-trace-header" @click="materialTraceCollapsed = !materialTraceCollapsed">
                 <span class="card-header__title">原材料批次追溯</span>
+                <el-icon class="collapse-icon" :class="{ collapsed: materialTraceCollapsed }"><ArrowDown /></el-icon>
               </div>
-              <div class="material-grid">
+              <div v-show="!materialTraceCollapsed" class="material-grid">
                 <div v-for="mat in materialList" :key="mat.label" class="material-item">
                   <div class="mat-icon"><el-icon><Coin /></el-icon></div>
                   <div class="mat-info">
@@ -189,9 +240,9 @@
                     <span class="barcode-font">{{ mat.value }}</span>
                   </div>
                 </div>
-              </div>
-              <div v-if="materialList.length === 0" class="empty-materials">
-                暂无原材料绑定记录
+                <div v-if="materialList.length === 0" class="empty-materials">
+                  暂无原材料绑定记录
+                </div>
               </div>
             </section>
           </div>
@@ -420,14 +471,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Box, Cpu, Calendar, Coin, Operation, Download, User, Search, Check, Pointer } from '@element-plus/icons-vue'
+import { Box, Cpu, Calendar, Coin, Operation, Download, User, Search, Check, Pointer, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { cellApi, type CellTraceResult } from '@/api/cells'
 import { batchApi } from '@/api/batch'
 import { getPackByBarcode, type Pack } from '@/api/pack'
+import { formatDateTime } from '@/composables/datetime'
 
 /* ============ Constants & Types ============ */
 import { processDictionaryApi } from '@/api/process-dictionary'
+import { formatKValue } from './formatKValue'
+import { resolveTraceProcessStatus } from './processTraceStatus'
 
 // Dynamic Process Definitions
 const processDict = ref<Record<string, any>>({})
@@ -445,7 +499,9 @@ const PROCESS_ORDER = [
   { key: 'injection', name: '注液' },
   { key: 'wrapping', name: '顶封' },
   { key: 'formation', name: '化成' },
+  { key: 'ocv1', name: 'OCV1测试' },
   { key: 'grading', name: '分容' },
+  { key: 'ocv2', name: 'OCV2测试' },
   { key: 'sorting', name: '分选' },
 ]
 
@@ -516,6 +572,16 @@ const PROCESS_FIELD_GROUPS: Record<string, { title: string; fields: Record<strin
     { title: '检测参数', fields: { ocvVoltageRange: 'OCV电压范围', irRange: '内阻范围', capacityRange: '容量范围' } },
     { title: '操作信息', fields: { operatorName: '操作员' } },
   ],
+  ocv1: [
+    { title: '设备参数', fields: { equipmentCode: '设备编号' } },
+    { title: '检测参数', fields: { ocvVoltageMin: 'OCV电压', ocvVoltageMax: 'OCV电压(最大)' } },
+    { title: '操作信息', fields: { operatorName: '操作员' } },
+  ],
+  ocv2: [
+    { title: '设备参数', fields: { equipmentCode: '设备编号' } },
+    { title: '检测参数', fields: { ocvVoltageMin: 'OCV电压', ocvVoltageMax: 'OCV电压(最大)' } },
+    { title: '操作信息', fields: { operatorName: '操作员' } },
+  ],
 }
 
 const SKIP_FIELDS = new Set(['batchNo', 'id', 'createdBy', 'createdAt', 'updatedBy', 'updatedAt', 'recordStatus', 'isDraft'])
@@ -556,6 +622,11 @@ const previewLoading = ref(false)
 const previewBarcode = ref('')
 const previewData = ref<CellTraceResult | null>(null)
 
+// 横向流程卡片状态
+const cardViewMode = ref<'overview' | 'focus'>('overview')
+const focusedProcessKey = ref<string | null>(null)
+const materialTraceCollapsed = ref(false)
+
 /* ============ Computed ============ */
 
 const placeholderText = computed(() => {
@@ -568,14 +639,23 @@ const processList = computed(() => {
   const data = processes.value
   return PROCESS_ORDER.map((p) => {
     const record = data[p.key] || null
-    let status = 'not_entered'
-    if (record) {
-      if (record.recordStatus === 2) status = 'voided'
-      else if (!record.isDraft) status = 'submitted'
-      else status = 'draft'
-    }
+    const status = resolveTraceProcessStatus(record)
     return { ...p, record, status }
   })
+})
+
+const completedSteps = computed(() => {
+  return processList.value.filter(p => p.status === 'submitted' || p.status === 'saved').length
+})
+
+const totalSteps = computed(() => PROCESS_ORDER.length)
+
+const progressPercent = computed(() => {
+  return totalSteps.value > 0 ? Math.round((completedSteps.value / totalSteps.value) * 100) : 0
+})
+
+const visibleProcessList = computed(() => {
+  return processList.value.filter(p => p.status !== 'not_entered')
 })
 
 const selectedRecord = computed(() => {
@@ -631,13 +711,13 @@ const previewProcessList = computed(() => {
   const data = previewData.value?.processes || {}
   return PROCESS_ORDER.map((p) => {
     const record = data[p.key] || null
-    let status = record ? (record.isDraft ? 'draft' : 'submitted') : 'not_entered'
+    const status = resolveTraceProcessStatus(record)
     return { ...p, record, status }
   })
 })
 
 const previewDoneSteps = computed(() => {
-  return previewProcessList.value.filter(p => p.status === 'submitted').length
+  return previewProcessList.value.filter(p => p.status === 'saved' || p.status === 'submitted').length
 })
 
 const materialList = computed(() => {
@@ -734,6 +814,38 @@ function getProcessFields(proc: any) {
   )
 }
 
+function getProcessGroupedFields(proc: any) {
+  const record = proc.record
+  if (!record) return []
+
+  let groups = PROCESS_FIELD_GROUPS_DYNAMIC.value[proc.key]
+  if (!groups || groups.length === 0) {
+    groups = PROCESS_FIELD_GROUPS[proc.key]
+  }
+  if (!groups) return []
+
+  const allData = { ...record }
+  if (record.extraData) {
+    try {
+      const extra = JSON.parse(record.extraData)
+      Object.assign(allData, extra)
+    } catch (e) {}
+  }
+
+  return groups
+    .map((g: any) => ({
+      title: g.title,
+      fields: (Array.isArray(g.fields) ? g.fields : Object.entries(g.fields).map(([k, l]) => ({ key: k, label: l, unit: '' })))
+        .filter((f: any) => allData[f.key] !== undefined && allData[f.key] !== null)
+        .map((f: any) => ({
+          key: f.key,
+          label: f.label,
+          value: formatValue(allData[f.key]) + (f.unit ? ` ${f.unit}` : '')
+        })),
+    }))
+    .filter((g: any) => g.fields.length > 0)
+}
+
 function formatValue(val: any): string {
   if (val === null || val === undefined) return '-'
   if (typeof val === 'number') return Number.isInteger(val) ? val.toString() : val.toFixed(3)
@@ -741,27 +853,45 @@ function formatValue(val: any): string {
 }
 
 function formatTime(iso: string): string {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleString('zh-CN', { hour12: false })
+  const s = formatDateTime(iso, { withSeconds: true })
+  return s || '-'
 }
 
 function formatTimeShort(iso: string): string {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) + ' ' + 
-         new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+  const s = formatDateTime(iso)
+  if (!s) return '-'
+  return `${s.slice(5, 10)} ${s.slice(11)}`
 }
 
 function stepTag(proc: { status: string }): any {
-  return { submitted: 'success', draft: 'warning', not_entered: 'info', voided: 'danger' }[proc.status] || 'info'
+  return { saved: 'success', submitted: 'success', not_entered: 'info', voided: 'danger' }[proc.status] || 'info'
 }
 
 function stepLabel(proc: { status: string }): string {
+  if (proc.status === 'saved') return '\u5df2\u4fdd\u5b58'
   return { submitted: '已入库', draft: '草稿', not_entered: '未开始', voided: '作废' }[proc.status] || '未知'
 }
 
 function switchMode(m: 'barcode' | 'batch' | 'pack') {
   mode.value = m
   resetSearch()
+}
+
+function toggleFocus(procKey: string) {
+  if (cardViewMode.value === 'overview') {
+    cardViewMode.value = 'focus'
+    focusedProcessKey.value = procKey
+  } else if (focusedProcessKey.value === procKey) {
+    cardViewMode.value = 'overview'
+    focusedProcessKey.value = null
+  } else {
+    focusedProcessKey.value = procKey
+  }
+}
+
+function switchToOverview() {
+  cardViewMode.value = 'overview'
+  focusedProcessKey.value = null
 }
 
 function resetSearch() {
@@ -1074,7 +1204,7 @@ onMounted(() => {
 
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   margin-bottom: 32px;
 }
@@ -1149,76 +1279,265 @@ onMounted(() => {
   gap: 24px;
 }
 
-.process-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 20px;
-}
-
-.process-detail-card {
+/* ===== 进度条 ===== */
+.process-progress-bar {
   display: flex;
-  flex-direction: column;
-  height: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 24px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+  margin-bottom: 20px;
 }
 
-.header-left {
+.progress-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  flex: 1;
 }
 
-.step-num {
-  width: 24px;
-  height: 24px;
+.progress-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  white-space: nowrap;
+}
+
+.progress-track {
+  flex: 1;
+  height: 8px;
+  background: #f0f0f5;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #34c759, #0071e3);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.progress-segments {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.segment-dot {
+  flex: 1;
+  border-right: 1px solid rgba(255,255,255,0.3);
+}
+.segment-dot:last-child { border-right: none; }
+
+.progress-percent {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0071e3;
+  white-space: nowrap;
+}
+
+.view-toggle {
+  display: flex;
+  background: #f2f2f7;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #86868b;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: #fff;
+  color: #1d1d1f;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* ===== 横向流程卡片 ===== */
+.process-cards-flow {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #d2d2d7 transparent;
+}
+
+.process-cards-flow::-webkit-scrollbar {
+  height: 6px;
+}
+
+.process-cards-flow::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.process-cards-flow::-webkit-scrollbar-thumb {
+  background: #d2d2d7;
+  border-radius: 3px;
+}
+
+.process-flow-card {
+  flex: 0 0 260px;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #f0f0f0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.process-flow-card:hover {
+  border-color: #0071e3;
+  box-shadow: 0 4px 16px rgba(0,113,227,0.1);
+  transform: translateY(-2px);
+}
+
+.process-flow-card.expanded {
+  flex: 1 1 100%;
+  min-width: 100%;
+  border-color: #0071e3;
+  box-shadow: 0 0 0 1px #0071e3, 0 4px 16px rgba(0,113,227,0.1);
+  cursor: default;
+}
+
+.process-flow-card.dimmed {
+  opacity: 0.5;
+  flex: 0 0 200px;
+}
+
+.process-flow-card.dimmed:hover {
+  opacity: 1;
+}
+
+.flow-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.flow-step-num {
+  width: 22px;
+  height: 22px;
   background: #f2f2f7;
   color: #1d1d1f;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
-.step-name {
-  font-size: 16px;
+.process-flow-card.expanded .flow-step-num {
+  background: #0071e3;
+  color: #fff;
+}
+
+.flow-step-name {
+  font-size: 15px;
   font-weight: 600;
-}
-
-.process-params {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin: 16px 0;
+  color: #1d1d1f;
   flex: 1;
 }
 
-.param-item {
+.flow-card-params-compact {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  flex: 1;
 }
 
-.param-item label {
-  font-size: 11px;
+.flow-param {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flow-param-label {
+  font-size: 10px;
   color: #86868b;
   text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.param-item span {
-  font-size: 14px;
+.flow-param-value {
+  font-size: 13px;
   font-weight: 500;
   color: #1d1d1f;
 }
 
-.process-footer {
+.flow-param-more {
+  font-size: 11px;
+  color: #0071e3;
+  margin-top: 4px;
+}
+
+.flow-card-params-full {
+  flex: 1;
+}
+
+.flow-param-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #86868b;
+  margin-top: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f5f5f7;
+}
+.flow-param-group-title:first-child { margin-top: 0; }
+
+.flow-param-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.flow-card-footer {
   margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid #f5f5f7;
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   color: #86868b;
+}
+
+/* ===== 原材料折叠 ===== */
+.material-trace-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapse-icon {
+  transition: transform 0.3s;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
 }
 
 /* ===== Material Trace Card ===== */

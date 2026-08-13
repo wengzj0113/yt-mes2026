@@ -91,7 +91,18 @@
     </el-dialog>
 
     <!-- 参数配置 Dialog -->
-    <el-dialog title="工序参数配置" v-model="configDialogVisible" width="1100px" top="5vh" class="config-dialog">
+    <el-dialog
+      title="工序参数配置"
+      v-model="configDialogVisible"
+      width="1100px"
+      top="5vh"
+      class="config-dialog"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="true"
+      @open="configInitialSnapshot = JSON.stringify(configFields)"
+      @before-close="handleConfigBeforeClose"
+    >
       <div class="config-header">
         <div class="info">正在配置: <el-tag>{{ currentProcess?.processName }} ({{ currentProcess?.processCode }})</el-tag></div>
         <el-button type="primary" :icon="Plus" size="small" @click="handleAddField">添加参数</el-button>
@@ -105,13 +116,7 @@
         </el-table-column>
         <el-table-column label="参数 Key" width="160">
           <template #default="{ row }">
-            <el-input v-model="row.key" placeholder="如: voltage" :disabled="row.isSystem">
-              <template #prefix v-if="row.isSystem">
-                <el-tooltip content="系统预设字段，Key 不可修改" placement="top">
-                  <el-icon color="#409eff"><Lock /></el-icon>
-                </el-tooltip>
-              </template>
-            </el-input>
+            <el-input v-model="row.key" placeholder="如: voltage" />
           </template>
         </el-table-column>
         <el-table-column label="显示名称" width="140">
@@ -127,9 +132,12 @@
         <el-table-column label="类型" width="110">
           <template #default="{ row }">
             <el-select v-model="row.type">
-              <el-option label="文本" value="text" />
-              <el-option label="数字" value="number" />
-              <el-option label="下拉选择" value="select" />
+              <el-option
+                v-for="option in FIELD_TYPE_OPTIONS"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </template>
         </el-table-column>
@@ -140,6 +148,13 @@
                 <el-input-number v-model="row.min" placeholder="最小" size="small" :controls="false" style="width: 75px" />
                 <span>~</span>
                 <el-input-number v-model="row.max" placeholder="最大" size="small" :controls="false" style="width: 75px" />
+              </div>
+            </template>
+            <template v-else-if="row.type === 'range'">
+              <div class="range-key-editor">
+                <el-input v-model="row.minKey" placeholder="最小值 Key" size="small" />
+                <span>~</span>
+                <el-input v-model="row.maxKey" placeholder="最大值 Key" size="small" />
               </div>
             </template>
             <template v-else-if="row.type === 'select'">
@@ -157,13 +172,12 @@
         </el-table-column>
         <el-table-column label="操作" width="60" align="center" fixed="right">
           <template #default="{ $index, row }">
-            <el-tooltip :content="row.isSystem ? '系统字段建议保留' : '删除参数'" placement="top">
+            <el-tooltip content="删除参数" placement="top">
               <el-button 
                 type="danger" 
                 :icon="Delete" 
                 circle 
                 size="small" 
-                :disabled="row.isSystem"
                 @click="configFields.splice($index, 1)" 
               />
             </el-tooltip>
@@ -172,7 +186,7 @@
       </el-table>
 
       <div class="config-tip">
-        <el-alert title="提示: 参数 Key 应保持唯一。如果是系统内置字段(如 equipmentCode, operatorName)，修改 Label 可以改变显示名称。" type="info" :closable="false" show-icon />
+        <el-alert title="提示: 参数 Key 应保持唯一。" type="info" :closable="false" show-icon />
       </div>
 
       <template #footer>
@@ -187,11 +201,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { Plus, Edit, Delete, Search, Setting, Lock } from '@element-plus/icons-vue';
+import { Plus, Edit, Delete, Search, Setting } from '@element-plus/icons-vue';
 import { processDictionaryApi, type ProcessDictionaryDto } from '@/api/process-dictionary';
 import { useAuthStore } from '@/stores/auth';
+import { FIELD_TYPE_OPTIONS } from './processFieldTypes';
 
 const authStore = useAuthStore();
 const isAdmin = computed(() => authStore.user?.roleCode === 4);
@@ -211,6 +226,7 @@ const dialogVisible = ref(false);
 const isEdit = ref(false);
 const submitLoading = ref(false);
 const formRef = ref<FormInstance>();
+const configInitialSnapshot = ref<string>('');
 
 const formData = ref<Partial<ProcessDictionaryDto>>({
   processCode: '',
@@ -319,10 +335,25 @@ function handleAddField() {
 
 async function submitConfig() {
   if (!currentProcess.value?.id) return;
-  
-  // Validation
-  if (configFields.value.some(f => !f.key || !f.label)) {
-    return ElMessage.warning('请填写完整的参数 Key 和显示名称');
+
+  // 提交前自动 trim key/label，去掉复制带来的前后空白/不可见字符
+  configFields.value.forEach((f) => {
+    f.key = (f.key ?? '').trim();
+    f.label = (f.label ?? '').trim();
+    f.unit = (f.unit ?? '').trim();
+  });
+
+  // 完整性：key 与 label 都不能为空或纯空格
+  const emptyIndex = configFields.value.findIndex((f) => !f.key || !f.label);
+  if (emptyIndex !== -1) {
+    return ElMessage.warning(`第 ${emptyIndex + 1} 行：请填写完整的参数 Key 和显示名称`);
+  }
+
+  // 唯一性：key 不允许重复（trim 后比较）
+  const keys = configFields.value.map((f) => f.key);
+  const dupIndex = keys.findIndex((k, i) => keys.indexOf(k) !== i);
+  if (dupIndex !== -1) {
+    return ElMessage.warning(`第 ${dupIndex + 1} 行的参数 Key 与其他行重复，请修改后再保存`);
   }
 
   submitLoading.value = true;
@@ -338,6 +369,25 @@ async function submitConfig() {
   } finally {
     submitLoading.value = false;
   }
+}
+
+function handleConfigBeforeClose(done: () => void) {
+  const current = JSON.stringify(configFields.value);
+  if (current === configInitialSnapshot.value) {
+    done();
+    return;
+  }
+  ElMessageBox.confirm(
+    '当前有未保存的修改，确定关闭吗？已填写的参数将丢失。',
+    '未保存的修改',
+    {
+      confirmButtonText: '放弃修改',
+      cancelButtonText: '继续编辑',
+      type: 'warning',
+    },
+  )
+    .then(() => done())
+    .catch(() => {/* 用户选择继续编辑，不关闭 */});
 }
 
 async function handleDelete(id?: number) {
@@ -407,5 +457,13 @@ async function submitForm() {
 }
 .config-tip {
   margin-top: 16px;
+}
+.range-key-editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.range-key-editor .el-input {
+  width: 78px;
 }
 </style>

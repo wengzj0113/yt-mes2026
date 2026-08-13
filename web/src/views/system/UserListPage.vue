@@ -22,10 +22,15 @@
             <el-tag :type="row.isActive ? 'success' : 'info'" size="small">{{ row.isActive ? '启用' : '禁用' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column label="操作" width="220">
+        <el-table-column prop="createdAt" label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="300">
           <template #default="{ row }">
             <el-button size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" type="warning" @click="openResetPwd(row)">重置密码</el-button>
             <el-button size="small" :type="row.isActive ? 'warning' : 'success'" @click="toggleStatus(row)">
               {{ row.isActive ? '禁用' : '启用' }}
             </el-button>
@@ -64,6 +69,21 @@
         <el-button type="primary" :loading="saving" @click="handleSave">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showResetPwd" title="重置密码" width="420px">
+      <el-form ref="resetFormRef" :model="resetPwdForm" :rules="resetRules" label-width="100px" @submit.prevent>
+        <el-form-item label="新密码" prop="password">
+          <el-input v-model="resetPwdForm.password" type="password" show-password placeholder="留空则使用默认密码" />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="resetPwdForm.confirmPassword" type="password" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showResetPwd = false">取消</el-button>
+        <el-button type="primary" :loading="resetting" @click="handleResetPwd">确定重置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -71,10 +91,19 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { userApi } from '@/api/users'
-import type { UserDto } from '@/types/api'
+import { systemApi } from '@/api/system'
+import { formatDateTime } from '@/composables/datetime'
+import type { RoleDto, UserDto } from '@/types/api'
 
-const roleMap: Record<number, string> = { 1: '操作员', 2: '质检员', 3: '仓管员', 4: '管理员' }
-const roleOptions = Object.entries(roleMap).map(([code, name]) => ({ code: Number(code), name }))
+const FALLBACK_ROLES: Array<{ code: number; name: string }> = [
+  { code: 1, name: '操作员' },
+  { code: 2, name: '质检员' },
+  { code: 3, name: '仓管员' },
+  { code: 4, name: '管理员' },
+]
+
+const roleOptions = ref<Array<{ code: number; name: string }>>([...FALLBACK_ROLES])
+const roleMap = ref<Record<number, string>>(Object.fromEntries(FALLBACK_ROLES.map((r) => [r.code, r.name])))
 
 const list = ref<UserDto[]>([])
 const loading = ref(false)
@@ -83,6 +112,29 @@ const isEdit = ref(false)
 const saving = ref(false)
 const editingId = ref<number | null>(null)
 const formRef = ref()
+
+const showResetPwd = ref(false)
+const resetting = ref(false)
+const resetFormRef = ref()
+const resettingUser = ref<UserDto | null>(null)
+const resetPwdForm = reactive({
+  password: '',
+  confirmPassword: '',
+})
+const resetRules: Record<string, any> = {
+  confirmPassword: [
+    {
+      validator: (_rule: any, value: string, callback: Function) => {
+        if (value && value !== resetPwdForm.password) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur',
+    },
+  ],
+}
 
 const form = reactive({
   username: '',
@@ -102,8 +154,15 @@ const rules: Record<string, any> = {
 async function loadData() {
   loading.value = true
   try {
-    const res = await userApi.list()
-    list.value = res.data
+    const [usersRes, rolesRes] = await Promise.all([
+      userApi.list(),
+      systemApi.roles().catch(() => null),
+    ])
+    list.value = usersRes.data
+    if (rolesRes?.data?.length) {
+      roleOptions.value = rolesRes.data.map((r: RoleDto) => ({ code: r.code, name: r.name }))
+      roleMap.value = Object.fromEntries(roleOptions.value.map((r) => [r.code, r.name]))
+    }
   } catch {
     list.value = []
   } finally {
@@ -137,6 +196,33 @@ function openEdit(row: UserDto) {
   form.password = ''
   rules.password = []
   showDialog.value = true
+}
+
+function openResetPwd(row: UserDto) {
+  resettingUser.value = row
+  resetPwdForm.password = ''
+  resetPwdForm.confirmPassword = ''
+  showResetPwd.value = true
+}
+
+async function handleResetPwd() {
+  if (!resetFormRef.value || !resettingUser.value) return
+  try {
+    await resetFormRef.value.validate()
+  } catch {
+    return
+  }
+  resetting.value = true
+  try {
+    const pwd = resetPwdForm.password.trim() || undefined
+    await userApi.resetPassword(resettingUser.value.id, pwd)
+    ElMessage.success(`用户"${resettingUser.value.realName}"密码已重置${pwd ? '' : '（默认: admin123）'}`)
+    showResetPwd.value = false
+  } catch {
+    // Error handled by interceptor
+  } finally {
+    resetting.value = false
+  }
 }
 
 async function handleSave() {

@@ -50,7 +50,7 @@ describe('ElectrodeController', () => {
 
   describe('POST /api/processes/electrode/submit', () => {
     it('should submit quality review', async () => {
-      const dto = { batchNo: 'WT26A01MA', tabWeldingPull: '50N' };
+      const dto = { batchNo: 'WT26A01MA', tabWeldingPull: 50 };
       (service.submitQuality as jest.Mock).mockResolvedValue({ ...mockRecord, isDraft: false });
 
       const result = await controller.submitQuality(dto, { sub: 2 } as any);

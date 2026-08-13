@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like, Between } from 'typeorm';
 import { QualityCheck, VALID_PROCESS_TYPES } from './quality-check.entity';
-import { Batch } from '../batch/batch.entity';
-import { BatchStatus } from '../batch/batch.entity';
+import { Batch, BatchStatus } from '../batch/batch.entity';
+import { BatchStatusLog } from '../batch/batch-status-log.entity';
 import { CreateQualityCheckDto } from './dto/create-quality-check.dto';
+import { QueryQualityDto } from './dto/query-quality.dto';
 import { CellBarcode } from '../cells/cell-barcode.entity';
 
 @Injectable()
@@ -14,17 +15,16 @@ export class QualityCheckService {
     private readonly repo: Repository<QualityCheck>,
     @InjectRepository(Batch)
     private readonly batchRepo: Repository<Batch>,
+    @InjectRepository(BatchStatusLog)
+    private readonly statusLogRepo: Repository<BatchStatusLog>,
     @InjectRepository(CellBarcode)
     private readonly cellBarcodeRepo: Repository<CellBarcode>,
   ) {}
 
-  private async validateBatch(batchNo: string) {
+  private async validateBatchExists(batchNo: string) {
     const batch = await this.batchRepo.findOne({ where: { batchNo } });
     if (!batch) {
       throw new NotFoundException({ code: 'BATCH_NOT_FOUND', message: `批次 ${batchNo} 不存在` });
-    }
-    if (batch.status !== BatchStatus.IN_PROGRESS) {
-      throw new BadRequestException({ code: 'BATCH_STATUS_CONFLICT', message: '批次未在进行中状态' });
     }
     return batch;
   }
@@ -33,7 +33,7 @@ export class QualityCheckService {
     if (!dto.batchNo) {
       throw new BadRequestException({ code: 'VALIDATION_ERROR', message: '批次号不能为空' });
     }
-    await this.validateBatch(dto.batchNo);
+    await this.validateBatchExists(dto.batchNo);
 
     if (!VALID_PROCESS_TYPES.includes(dto.processType as any)) {
       throw new BadRequestException({ code: 'VALIDATION_ERROR', message: `无效的工序类型: ${dto.processType}` });
@@ -70,31 +70,153 @@ export class QualityCheckService {
     return this.repo.save(record);
   }
 
+  /** 质检员检验（创建记录 + 不合格时更新批次状态） */
+  async inspect(dto: CreateQualityCheckDto, userId: number): Promise<QualityCheck> {
+    const record = await this.create(dto, userId);
+    // create 已校验 batchNo 不能为空，此处一定存在
+    if (dto.inspectionResult === 2 && dto.batchNo) {
+      await this.handleQualityIssue(dto.batchNo, userId);
+    }
+    return record;
+  }
+
+  /** 质检不合格处理：更新批次状态为 QUALITY_ISSUE 并记录日志 */
+  private async handleQualityIssue(batchNo: string, userId: number) {
+    const batch = await this.batchRepo.findOne({ where: { batchNo } });
+    if (batch && batch.status === BatchStatus.IN_PROGRESS) {
+      batch.status = BatchStatus.QUALITY_ISSUE;
+      await this.batchRepo.save(batch);
+      await this.statusLogRepo.save(
+        this.statusLogRepo.create({
+          batchNo,
+          fromStatus: BatchStatus.IN_PROGRESS,
+          toStatus: BatchStatus.QUALITY_ISSUE,
+          changeReason: '质检不合格',
+          changedBy: userId,
+        })
+      );
+    }
+  }
+
+  /** 分页查询所有质检记录 */
+  async findAllPaginated(filters: QueryQualityDto) {
+    const { batchNo, processType, inspectionResult, inspectorName, startDate, endDate, page = 1, pageSize = 20 } = filters;
+
+    const where: any = {};
+
+    if (batchNo) where.batchNo = Like(`%${batchNo}%`);
+    if (processType) where.processType = processType;
+    if (inspectionResult) where.inspectionResult = inspectionResult;
+    if (inspectorName) where.inspectorName = Like(`%${inspectorName}%`);
+    if (startDate && endDate) {
+      where.createdAt = Between(new Date(startDate), new Date(endDate + 'T23:59:59'));
+    }
+
+    const [items, total] = await this.repo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    return { items, total, page, pageSize };
+  }
+
+  /** 查询所有待质检的工序 */
+  async findPendingQuality(batchNo?: string): Promise<any[]> {
+    // 查询所有已提交（isDraft=false, recordStatus=1）的工序
+    const processTables = [
+      'batching', 'coating', 'roller_pressing', 'slitting', 'electrode',
+      'winding', 'assembly', 'baking', 'injection', 'wrapping',
+      'formation', 'grading', 'sorting',
+    ];
+
+    const processNames: Record<string, string> = {
+      batching: '配料', coating: '涂布', roller_pressing: '辊压', slitting: '分切',
+      electrode: '制片', winding: '卷绕', assembly: '装配', baking: '烘烤',
+      injection: '注液', wrapping: '顶封', formation: '化成', grading: '分容', sorting: '分选',
+    };
+
+    const batchNoFilter = batchNo ? `AND p.batch_no LIKE '%${batchNo.replace(/'/g, "''")}%'` : '';
+
+    // 使用 UNION ALL 查询所有已提交 but 未质检的工序
+    const queries = processTables.map(table => {
+      return `SELECT '${table}' as processType, p.batch_no as batchNo, p.operator_name as operatorName, p.updated_at as submittedAt
+              FROM ${table}_record p
+              WHERE p.is_draft = 0 AND p.record_status = 1
+              AND NOT EXISTS (SELECT 1 FROM quality_check q WHERE q.batch_no = p.batch_no AND q.process_type = '${table}')
+              ${batchNoFilter}`;
+    });
+
+    const results: any[] = await this.repo.query(queries.join('\nUNION ALL\n'));
+    return results.map(r => ({
+      processType: r.processType,
+      processName: processNames[r.processType] || r.processType,
+      batchNo: r.batchNo,
+      operatorName: r.operatorName,
+      submittedAt: r.submittedAt ? new Date(r.submittedAt).toISOString() : null,
+    }));
+  }
+
+  async findOne(id: number): Promise<QualityCheck> {
+    const record = await this.repo.findOne({ where: { id } });
+    if (!record) {
+      throw new NotFoundException({ code: 'QUALITY_NOT_FOUND', message: '质检记录不存在' });
+    }
+    return record;
+  }
+
   async findAll(batchNo: string): Promise<QualityCheck[]> {
     return this.repo.find({ where: { batchNo }, order: { createdAt: 'DESC' } });
   }
 
+  async update(id: number, dto: Partial<CreateQualityCheckDto>, userId: number): Promise<QualityCheck> {
+    const record = await this.findOne(id);
+    if (dto.processType !== undefined) record.processType = dto.processType;
+    if (dto.inspectionResult !== undefined) record.inspectionResult = dto.inspectionResult;
+    if (dto.defectQty !== undefined) record.defectQty = dto.defectQty;
+    if (dto.defectReason !== undefined) record.defectReason = dto.defectReason;
+    if (dto.inspectorName !== undefined) record.inspectorName = dto.inspectorName;
+    if (dto.abnormalRecord !== undefined) record.abnormalRecord = dto.abnormalRecord;
+    record.updatedBy = userId;
+    return this.repo.save(record);
+  }
+
+  async remove(id: number): Promise<void> {
+    const record = await this.findOne(id);
+    await this.repo.remove(record);
+  }
+
   async getQualityTrends() {
-    // Get last 10 batches
     const batches = await this.batchRepo.find({
       order: { createdAt: 'DESC' },
       take: 10,
     });
 
-    const trends = await Promise.all(
-      batches.reverse().map(async (batch) => {
-        const total = await this.cellBarcodeRepo.count({ where: { batchNo: batch.batchNo } });
-        const passed = await this.cellBarcodeRepo.count({
-          where: { batchNo: batch.batchNo, grade: 'A' },
-        });
-        const rate = total > 0 ? (passed / total) * 100 : 95 + Math.random() * 5; // Fallback to random if no cells
-        return {
-          batchNo: batch.batchNo,
-          passRate: parseFloat(rate.toFixed(1)),
-        };
-      }),
-    );
+    if (batches.length === 0) return [];
 
-    return trends;
+    const batchNos = batches.map((b) => b.batchNo);
+
+    const results = await this.cellBarcodeRepo
+      .createQueryBuilder('cb')
+      .select('cb.batchNo', 'batchNo')
+      .addSelect('COUNT(*)', 'total')
+      .addSelect('SUM(CASE WHEN cb.grade = \'A\' THEN 1 ELSE 0 END)', 'passed')
+      .where('cb.batchNo IN (:...batchNos)', { batchNos })
+      .groupBy('cb.batchNo')
+      .getRawMany();
+
+    const resultMap = new Map(results.map((r) => [r.batchNo, r]));
+
+    return batches.reverse().map((batch) => {
+      const row = resultMap.get(batch.batchNo);
+      const total = row ? Number(row.total) : 0;
+      const passed = row ? Number(row.passed) : 0;
+      const rate = total > 0 ? (passed / total) * 100 : null;
+      return {
+        batchNo: batch.batchNo,
+        passRate: rate !== null ? parseFloat(rate.toFixed(1)) : null,
+      };
+    });
   }
 }

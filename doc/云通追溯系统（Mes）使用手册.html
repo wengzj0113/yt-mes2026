@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云通追溯系统（MES）使用手册</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-light: #e8f0fe;
+    --sidebar-bg: #001529;
+    --sidebar-width: 260px;
+    --text: #1f2937;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --bg: #ffffff;
+    --bg-gray: #f8fafc;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --code-bg: #1e293b;
+    --code-fg: #e2e8f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 15px;
+    background: var(--bg-gray);
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--sidebar-bg);
+    color: #fff;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .sidebar-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: #fff;
+  }
+  .sidebar-header .version {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+  .sidebar-nav { padding: 12px 0; }
+  .sidebar-nav a {
+    display: block;
+    padding: 8px 20px;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all .15s;
+    border-left: 3px solid transparent;
+  }
+  .sidebar-nav a:hover,
+  .sidebar-nav a.active {
+    background: rgba(255,255,255,.06);
+    color: #fff;
+  }
+  .sidebar-nav a.active { border-left-color: var(--primary); }
+  .sidebar-nav .nav-section {
+    padding: 16px 20px 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    font-weight: 600;
+  }
+  .sidebar-nav .nav-sub a { padding-left: 36px; font-size: 13px; }
+
+  /* ===== Main ===== */
+  .main {
+    margin-left: var(--sidebar-width);
+    padding: 0;
+    min-height: 100vh;
+  }
+  .page-header {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 48px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .page-header .updated {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .content { padding: 32px 48px 80px; }
+
+  /* ===== Typography ===== */
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary);
+    color: var(--text);
+    scroll-margin-top: 80px;
+  }
+  h2:first-of-type { margin-top: 0; }
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+    color: var(--text);
+    scroll-margin-top: 80px;
+  }
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 24px 0 8px;
+    color: var(--text);
+  }
+  p { margin-bottom: 12px; }
+  ul, ol { margin: 8px 0 16px 20px; }
+  li { margin-bottom: 4px; }
+
+  /* ===== Info boxes ===== */
+  .info-box {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 14px;
+    border-left: 4px solid;
+  }
+  .info-box.tip { background: #eff6ff; border-left-color: var(--info); }
+  .info-box.warning { background: #fffbeb; border-left-color: var(--warning); }
+  .info-box.caution { background: #fef2f2; border-left-color: var(--danger); }
+  .info-box.success { background: #ecfdf5; border-left-color: var(--success); }
+
+  /* ===== Tables ===== */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 16px 0 24px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead { background: var(--bg-gray); }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+
+  /* ===== Process cards ===== */
+  .process-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .process-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: box-shadow .15s;
+  }
+  .process-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  .process-card .step {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .process-card .info { flex: 1; }
+  .process-card .info .name { font-weight: 600; }
+  .process-card .info .name-en { font-size: 12px; color: var(--text-secondary); }
+
+  /* ===== Steps ===== */
+  .steps {
+    counter-reset: step;
+    margin: 16px 0;
+  }
+  .steps .step-item {
+    counter-increment: step;
+    padding: 14px 16px 14px 48px;
+    position: relative;
+    border-left: 2px solid var(--border);
+    margin-left: 16px;
+  }
+  .steps .step-item:last-child { border-left-color: transparent; }
+  .steps .step-item::before {
+    content: counter(step);
+    position: absolute;
+    left: -14px;
+    top: 14px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* ===== Tags ===== */
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .tag.green { background: #ecfdf5; color: #059669; }
+  .tag.blue { background: #eff6ff; color: #2563eb; }
+  .tag.yellow { background: #fffbeb; color: #d97706; }
+  .tag.red { background: #fef2f2; color: #dc2626; }
+  .tag.gray { background: #f3f4f6; color: #6b7280; }
+  .tag.purple { background: #f3e8ff; color: #7c3aed; }
+  .tag.orange { background: #fff7ed; color: #c2410c; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 1024px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .page-header, .content { padding-left: 24px; padding-right: 24px; }
+  }
+
+  /* ===== TOC ===== */
+  .toc { margin: 24px 0 32px; background: #fff; border:1px solid var(--border); border-radius:8px; padding: 20px 28px; }
+  .toc ol { counter-reset: toc; list-style: none; margin: 0; }
+  .toc > ol > li { counter-increment: toc; margin-bottom: 6px; }
+  .toc > ol > li::before { content: counter(toc) ". "; font-weight: 600; color: var(--primary); }
+  .toc ol ol { margin: 4px 0 8px 24px; list-style: none; counter-reset: toc-sub; }
+  .toc ol ol > li { counter-increment: toc-sub; }
+  .toc ol ol > li::before { content: counter(toc) "." counter(toc-sub) " "; color: var(--primary); }
+  .toc a { color: var(--text); text-decoration: none; }
+  .toc a:hover { color: var(--primary); text-decoration: underline; }
+
+  /* ===== Inline code ===== */
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #dc2626;
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 16px 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 12px 0;
+  }
+  pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  /* ===== Print ===== */
+  @media print {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .page-header { position: static; }
+    h2 { page-break-before: always; page-break-after: avoid; }
+    h3, h4 { page-break-after: avoid; }
+    .process-grid { break-inside: avoid; }
+  }
+
+  /* ===== Badge ===== */
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.role-1 { background: #dbeafe; color: #1d4ed8; }
+  .badge.role-2 { background: #dcfce7; color: #15803d; }
+  .badge.role-3 { background: #fef3c7; color: #b45309; }
+  .badge.role-4 { background: #fce7f3; color: #be185d; }
+
+  /* ===== Feature box ===== */
+  .feature-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .feature-box h4 {
+    margin-top: 0;
+    color: var(--primary);
+    font-size: 16px;
+  }
+
+  /* ===== Glossary ===== */
+  .glossary-term {
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  /* ===== Diagram ===== */
+  .flow-diagram {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .flow-node {
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .flow-arrow {
+    color: var(--text-secondary);
+    font-size: 18px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- Sidebar -->
+<!-- ============================================================ -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1>云通追溯系统</h1>
+    <div class="version">MES · 使用手册 v1.0</div>
+  </div>
+  <div class="sidebar-nav">
+    <a href="#intro" class="active">1. 系统简介</a>
+    <a href="#start">2. 快速上手</a>
+    <a href="#login">3. 登录与账号</a>
+    <div class="nav-section">核心功能</div>
+    <a href="#dashboard">4. 工作台</a>
+    <a href="#trace">5. 电芯追溯</a>
+    <a href="#batch">6. 批次管理</a>
+    <a href="#process-hub">7. 现场扫码录入</a>
+    <a href="#pack-entry">8. Pack 组装录入</a>
+    <a href="#quality">9. 质量检验</a>
+    <a href="#material">10. 原材料仓库</a>
+    <a href="#big-screen">11. 大屏看板</a>
+    <div class="nav-section">系统管理</div>
+    <a href="#process-dict">12. 工序主数据</a>
+    <a href="#user">13. 用户与角色</a>
+    <a href="#department">14. 部门管理</a>
+    <a href="#equipment">15. 设备管理</a>
+    <a href="#logs">16. 操作与接口日志</a>
+    <a href="#settings">17. 系统配置</a>
+    <div class="nav-section">附录</div>
+    <a href="#glossary">A. 术语表</a>
+    <a href="#roles">B. 角色权限对照</a>
+    <a href="#status">C. 状态编码说明</a>
+    <a href="#faq">D. 常见问题 FAQ</a>
+    <a href="#shortcuts">E. 操作快捷指引</a>
+  </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- Main -->
+<!-- ============================================================ -->
+<div class="main">
+
+<div class="page-header">
+  <h1>云通追溯系统（MES）使用手册</h1>
+  <div class="updated">版本 v1.0 &mdash; 适用对象：现场操作员、质检员、仓库管理员、系统管理员</div>
+</div>
+
+<div class="content">
+
+<!-- ============================================================ -->
+<!-- 1. 系统简介 -->
+<!-- ============================================================ -->
+<h2 id="intro">1. 系统简介</h2>
+
+<h3>1.1 系统定位</h3>
+<p>云通追溯系统（YT-MES）是一套面向锂电池电芯生产企业的<strong>制造执行系统（MES）</strong>，覆盖从原材料配料到电芯分选出厂的<strong>13 道关键工序</strong>，实现"一物一码、全程可追"。</p>
+
+<p>系统以<strong>批次（Batch）</strong>为生产主线，以<strong>电芯条码（Cell Barcode）</strong>为追溯最小单元，自动汇集每道工序的工艺参数、设备信息、操作员、质检结果与分选机测量数据，最终在 Dashboard 与大屏上呈现生产全景。</p>
+
+<h3>1.2 核心价值</h3>
+<ul>
+  <li><strong>正向追溯</strong>：从原材料 → 工序 → 半成品 → 成品，跟踪每个环节的工艺参数与责任人。</li>
+  <li><strong>反向追溯</strong>：通过电芯条码反查该电芯经历的全部工序、检验结果、分选档位、所在 Pack。</li>
+  <li><strong>质量管控</strong>：在关键工序设置质检节点，不合格品自动置 <span class="tag red">质量异常</span>，阻断后续流转。</li>
+  <li><strong>数据集成</strong>：对接 OCV 测试机、分选机等硬件，测量数据自动入库。</li>
+  <li><strong>可视化管理</strong>：实时 Dashboard 与车间大屏，呈现生产进度、合格率、设备状态。</li>
+</ul>
+
+<h3>1.3 13 道工序一览</h3>
+<div class="process-grid">
+  <div class="process-card"><span class="step">1</span><div class="info"><div class="name">配料</div><div class="name-en">Batching</div></div></div>
+  <div class="process-card"><span class="step">2</span><div class="info"><div class="name">涂布</div><div class="name-en">Coating</div></div></div>
+  <div class="process-card"><span class="step">3</span><div class="info"><div class="name">辊压</div><div class="name-en">Roller Pressing</div></div></div>
+  <div class="process-card"><span class="step">4</span><div class="info"><div class="name">分切</div><div class="name-en">Slitting</div></div></div>
+  <div class="process-card"><span class="step">5</span><div class="info"><div class="name">制片</div><div class="name-en">Electrode</div></div></div>
+  <div class="process-card"><span class="step">6</span><div class="info"><div class="name">卷绕</div><div class="name-en">Winding</div></div></div>
+  <div class="process-card"><span class="step">7</span><div class="info"><div class="name">装配</div><div class="name-en">Assembly</div></div></div>
+  <div class="process-card"><span class="step">8</span><div class="info"><div class="name">烘烤</div><div class="name-en">Baking</div></div></div>
+  <div class="process-card"><span class="step">9</span><div class="info"><div class="name">注液</div><div class="name-en">Injection</div></div></div>
+  <div class="process-card"><span class="step">10</span><div class="info"><div class="name">顶封</div><div class="name-en">Wrapping</div></div></div>
+  <div class="process-card"><span class="step">11</span><div class="info"><div class="name">化成</div><div class="name-en">Formation</div></div></div>
+  <div class="process-card"><span class="step">12</span><div class="info"><div class="name">分容</div><div class="name-en">Grading</div></div></div>
+  <div class="process-card"><span class="step">13</span><div class="info"><div class="name">分选</div><div class="name-en">Sorting</div></div></div>
+</div>
+
+<p>其中 <strong>配料、制片、卷绕、装配、烘烤、注液、顶封、化成、分容</strong> 共 9 道工序带有质检节点（提交后需质检员确认）；<strong>涂布、辊压、分切、分选</strong> 为纯工艺录入。</p>
+
+<h3>1.4 系统模块结构</h3>
+<div class="flow-diagram">
+  <span class="flow-node">仪表盘</span><span class="flow-arrow">→</span>
+  <span class="flow-node">批次管理</span><span class="flow-arrow">→</span>
+  <span class="flow-node">现场扫码</span><span class="flow-arrow">→</span>
+  <span class="flow-node">质检管理</span><span class="flow-arrow">→</span>
+  <span class="flow-node">电芯追溯</span><span class="flow-arrow">→</span>
+  <span class="flow-node">Pack 录入</span><span class="flow-arrow">→</span>
+  <span class="flow-node">原材料仓库</span><span class="flow-arrow">→</span>
+  <span class="flow-node">系统管理</span><span class="flow-arrow">→</span>
+  <span class="flow-node">大屏看板</span>
+</div>
+
+<!-- ============================================================ -->
+<!-- 2. 快速上手 -->
+<!-- ============================================================ -->
+<h2 id="start">2. 快速上手</h2>
+
+<h3>2.1 浏览器要求</h3>
+<ul>
+  <li>推荐使用 <strong>Chrome 100+ / Edge 100+ / Firefox 100+</strong></li>
+  <li>建议屏幕分辨率 <strong>1366×768</strong> 或以上</li>
+  <li>大屏看板模式建议 <strong>1920×1080</strong> 全屏展示</li>
+</ul>
+
+<h3>2.2 系统访问地址</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>环境</th><th>主应用地址</th><th>大屏地址</th></tr></thead>
+<tbody>
+<tr><td>开发环境</td><td><code>http://localhost:5173</code></td><td><code>http://localhost:5173/big-screen</code></td></tr>
+<tr><td>生产环境</td><td><code>http://服务器IP:8080</code></td><td><code>http://服务器IP:8081/big-screen</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>2.3 三步进入系统</h3>
+<div class="steps">
+  <div class="step-item">打开浏览器，输入主应用地址。</div>
+  <div class="step-item">在登录页输入<strong>用户名</strong>、<strong>密码</strong>，点击【登录】。</div>
+  <div class="step-item">登录成功后自动跳转至<strong>工作台</strong>，可开始日常作业。</div>
+</div>
+
+<div class="info-box tip">
+<strong>默认管理员账号：</strong>用户名 <code>admin</code>，初始密码 <code>admin123</code>。<strong>首次登录后请立即修改密码</strong>（点击右上角用户名 → 修改密码）。
+</div>
+
+<!-- ============================================================ -->
+<!-- 3. 登录与账号 -->
+<!-- ============================================================ -->
+<h2 id="login">3. 登录与账号</h2>
+
+<h3>3.1 登录页</h3>
+<p>访问系统根地址后自动跳转到登录页 <code>/login</code>。登录界面包含：</p>
+<ul>
+  <li><strong>用户名</strong>：必填，区分大小写</li>
+  <li><strong>密码</strong>：必填，至少 6 位字符</li>
+  <li><strong>记住我</strong>（可选）：勾选后保持登录状态 7 天</li>
+  <li><strong>注册</strong>按钮：新员工自助注册账号（待管理员审核）</li>
+</ul>
+
+<h3>3.2 修改密码</h3>
+<div class="steps">
+  <div class="step-item">点击页面右上角<strong>用户名</strong>（如"张三"）</div>
+  <div class="step-item">在弹出菜单中选择【修改密码】</div>
+  <div class="step-item">输入<strong>原密码</strong>、<strong>新密码</strong>（≥ 8 位，包含字母与数字）、<strong>确认新密码</strong></div>
+  <div class="step-item">点击【确认】完成修改</div>
+</div>
+
+<div class="info-box warning">
+<strong>密码安全要求：</strong>长度 ≥ 8 位；必须同时包含字母和数字；与最近 3 次密码不能重复。修改后会自动跳转到登录页要求重新登录。
+</div>
+
+<h3>3.3 退出登录</h3>
+<p>点击页面右上角用户名 → 【退出登录】，确认后清除会话并跳转至登录页。</p>
+
+<h3>3.4 忘记密码</h3>
+<p>联系系统管理员，在【系统管理 → 用户管理】中点击对应用户行的【重置密码】按钮，系统会将密码重置为初始密码 <code>123456</code>，首次登录后请立即修改。</p>
+
+<!-- ============================================================ -->
+<!-- 4. 工作台 -->
+<!-- ============================================================ -->
+<h2 id="dashboard">4. 工作台</h2>
+
+<h3>4.1 进入方式</h3>
+<p>登录成功后默认进入【仪表盘】模块，路径 <code>/dashboard</code>。也可通过左侧菜单【仪表盘】返回。</p>
+
+<h3>4.2 工作台内容</h3>
+<p>工作台以<strong>数据卡片 + 图表</strong>形式呈现当日生产全貌：</p>
+
+<h4>4.2.1 顶部数据卡片</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>指标</th><th>含义</th><th>更新频率</th></tr></thead>
+<tbody>
+<tr><td>今日新建批次</td><td>当天创建的批次总数</td><td>实时</td></tr>
+<tr><td>在制批次</td><td>状态为"生产中"的批次数</td><td>实时</td></tr>
+<tr><td>今日成品电芯数</td><td>通过分选入库的电芯总数</td><td>每分钟</td></tr>
+<tr><td>合格率</td><td>质检通过记录 / 全部质检记录</td><td>实时</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>4.2.2 图表区</h4>
+<ul>
+  <li><strong>近 7 日产量趋势</strong>：折线图，展示每日入库电芯数</li>
+  <li><strong>各工序状态分布</strong>：柱状图，统计各工序【草稿/待质检/已通过/已驳回】的记录数</li>
+  <li><strong>异常批次预警</strong>：列表卡片，显示状态为"质量异常"的批次</li>
+</ul>
+
+<h3>4.3 快捷入口</h3>
+<p>工作台右侧提供常用模块的<strong>快捷卡片</strong>：</p>
+<ul>
+  <li>【新建批次】→ 跳转到批次管理</li>
+  <li>【扫码录入】→ 跳转到现场扫码录入</li>
+  <li>【待我质检】→ 跳转到质检管理（仅质检员可见）</li>
+  <li>【查看大屏】→ 新窗口打开大屏看板</li>
+</ul>
+
+<!-- ============================================================ -->
+<!-- 5. 电芯追溯 -->
+<!-- ============================================================ -->
+<h2 id="trace">5. 电芯追溯</h2>
+
+<h3>5.1 模块用途</h3>
+<p>电芯追溯模块是本系统的<strong>核心查询入口</strong>，用于通过<strong>电芯条码</strong>反查该电芯从原料到分选的全部生产履历。</p>
+
+<h3>5.2 进入方式</h3>
+<p>左侧菜单 → 【电芯追溯】，路径 <code>/trace</code>。</p>
+
+<h3>5.3 查询电芯</h3>
+<div class="steps">
+  <div class="step-item">在页面顶部<strong>搜索框</strong>中输入电芯条码（支持条码枪扫描）</div>
+  <div class="step-item">按 <code>Enter</code> 或点击【查询】按钮</div>
+  <div class="step-item">系统加载该电芯的<strong>全部生产履历</strong>（通常 1~2 秒）</div>
+</div>
+
+<h3>5.4 追溯结果展示</h3>
+
+<h4>5.4.1 电芯基础信息</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>字段</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>电芯条码</td><td>唯一标识，与分选机系统对接生成</td></tr>
+<tr><td>所属批次</td><td>批次号，可点击跳转批次详情</td></tr>
+<tr><td>容量 (mAh)</td><td>分选机实测容量</td></tr>
+<tr><td>内阻 (mΩ)</td><td>分选机实测内阻</td></tr>
+<tr><td>电压 (V)</td><td>OCV 测量电压</td></tr>
+<tr><td>分选档位</td><td>A / B / C / D</td></tr>
+<tr><td>所在 Pack</td><td>所属 Pack 编号（未组 Pack 时为空）</td></tr>
+<tr><td>上传时间</td><td>分选机上传到 MES 的时间</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>5.4.2 全流程工序链</h4>
+<p>页面中部以<strong>时间线 + 工序卡片</strong>的形式展示该电芯所经历的全部工序：</p>
+<ul>
+  <li>工序名称 + 工序记录 ID</li>
+  <li>操作员、作业时间</li>
+  <li>工艺参数（温度、压力、速度等）</li>
+  <li>质检结果（通过 / 驳回 / 异常）</li>
+  <li>设备编号</li>
+</ul>
+
+<h4>5.4.3 K 值与 OCV 数据</h4>
+<p>对经过 OCV 测试（OCV1、OCV2）的电芯，展示：</p>
+<ul>
+  <li>OCV1 / OCV2 电压、内阻</li>
+  <li>K 值（OCV1 与 OCV2 电压差 / 时间差）</li>
+  <li>K 值单位：<code>mV/天</code></li>
+</ul>
+
+<h3>5.5 异常电芯定位</h3>
+<p>当客户反馈某只电芯异常时，可通过电芯条码查询<strong>该批次全部电芯</strong>：</p>
+<div class="steps">
+  <div class="step-item">在电芯追溯页输入任一电芯条码 → 点击【查看该批次全部电芯】</div>
+  <div class="step-item">系统跳转至<strong>批次详情页</strong>，展示本批次所有电芯列表</div>
+  <div class="step-item">可按<strong>档位、内阻、容量</strong>排序，定位异常个体</div>
+</div>
+
+<div class="info-box tip">
+<strong>操作建议：</strong>追溯查询建议在工位电脑配置<strong>条码扫描枪</strong>，扫码即可自动填充条码号，避免手工输入错误。
+</div>
+
+<!-- ============================================================ -->
+<!-- 6. 批次管理 -->
+<!-- ============================================================ -->
+<h2 id="batch">6. 批次管理</h2>
+
+<h3>6.1 模块用途</h3>
+<p>批次管理是 MES 的<strong>生产主线</strong>，每个生产批次对应一个唯一的<strong>批次号（BatchNo）</strong>。批次下关联：</p>
+<ul>
+  <li>13 道工序的工序记录</li>
+  <li>质检记录</li>
+  <li>电芯条码集合</li>
+  <li>物料投入信息</li>
+  <li>设备使用信息</li>
+</ul>
+
+<h3>6.2 进入方式</h3>
+<p>左侧菜单 → 【批次管理】，路径 <code>/batches</code>。</p>
+
+<h3>6.3 批次列表</h3>
+<p>批次列表默认按<strong>创建时间倒序</strong>展示，支持以下筛选：</p>
+<ul>
+  <li><strong>批次号</strong>：精确 / 模糊搜索</li>
+  <li><strong>状态</strong>：草稿 / 生产中 / 已完成 / 已关闭 / 质量异常</li>
+  <li><strong>产品型号</strong>：下拉选择</li>
+  <li><strong>创建日期</strong>：日期范围</li>
+  <li><strong>操作员</strong>：下拉选择</li>
+</ul>
+
+<h3>6.4 新建批次</h3>
+<p>仅<strong>管理员</strong>与<strong>操作员</strong>可创建批次。点击页面右上角【新建批次】按钮，填写：</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>字段</th><th>是否必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>批次号</td><td>自动生成</td><td>格式示例：<code>BN20260811001</code>，可手动调整</td></tr>
+<tr><td>产品型号</td><td>必填</td><td>下拉选择已配置的产品型号</td></tr>
+<tr><td>计划数量</td><td>必填</td><td>本批次计划生产电芯数（≥ 1）</td></tr>
+<tr><td>投产日期</td><td>必填</td><td>默认当天</td></tr>
+<tr><td>备注</td><td>选填</td><td>特殊说明（如试制批次）</td></tr>
+</tbody>
+</table>
+</div>
+<p>点击【确定】后批次进入 <span class="tag blue">生产中</span> 状态。</p>
+
+<h3>6.5 批次状态说明</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>状态</th><th>标签</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td>草稿</td><td><span class="tag gray">草稿</span></td><td>已创建但未投产（系统预留态，正常流程不使用）</td></tr>
+<tr><td>生产中</td><td><span class="tag blue">生产中</span></td><td>可执行工序记录的活跃态</td></tr>
+<tr><td>已完成</td><td><span class="tag green">已完成</span></td><td>所有 13 道工序均完成且质检通过</td></tr>
+<tr><td>已关闭</td><td><span class="tag gray">已关闭</span></td><td>管理员手动关闭，不可再修改</td></tr>
+<tr><td>质量异常</td><td><span class="tag red">质量异常</span></td><td>任一质检环节不通过，需返工或让步</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>6.6 批次详情页</h3>
+<p>点击列表中任一批次号，进入【批次详情】，路径 <code>/batches/{batchNo}</code>。详情页分四部分：</p>
+
+<h4>6.6.1 基本信息</h4>
+<p>展示批次号、型号、计划数量、投产日期、当前状态、操作员、创建/更新时间等。</p>
+
+<h4>6.6.2 工序进度看板</h4>
+<p>以<strong>13 工序进度条</strong>展示各工序状态：</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>状态</th><th>颜色</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td>未开始</td><td><span class="tag gray">未开始</span></td><td>尚未提交任何工艺记录</td></tr>
+<tr><td>草稿</td><td><span class="tag yellow">草稿</span></td><td>已填写未提交质检</td></tr>
+<tr><td>待质检</td><td><span class="tag orange">待质检</span></td><td>已提交，等待质检员确认</td></tr>
+<tr><td>已通过</td><td><span class="tag green">已通过</span></td><td>质检通过，可进入下道工序</td></tr>
+<tr><td>已驳回</td><td><span class="tag red">已驳回</span></td><td>质检不通过，需返工</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>6.6.3 工序记录时间线</h4>
+<p>按时间顺序展示本批次全部工序记录，每条记录可点击展开查看：</p>
+<ul>
+  <li>工艺参数</li>
+  <li>投入物料批次</li>
+  <li>使用设备</li>
+  <li>操作员 / 质检员</li>
+  <li>质检结果与备注</li>
+</ul>
+
+<h4>6.6.4 电芯明细</h4>
+<p>批次详情页底部展示本批次全部电芯条码列表，支持：</p>
+<ul>
+  <li>分选档位分布饼图</li>
+  <li>电芯明细表（条码、容量、内阻、电压、档位、上传时间）</li>
+  <li>导出 Excel</li>
+</ul>
+
+<h3>6.7 批量操作</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>操作</th><th>权限</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>编辑</td><td>管理员 / 操作员</td><td>仅可修改备注、计划数量</td></tr>
+<tr><td>关闭批次</td><td>管理员</td><td>将"生产中"批次强制关闭，不可逆</td></tr>
+<tr><td>删除</td><td>管理员</td><td>仅允许删除未投产且无子记录的批次</td></tr>
+<tr><td>导出</td><td>全员</td><td>导出批次详情为 Excel</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="info-box caution">
+<strong>注意：</strong>已关联电芯条码或工序记录的批次不可删除，避免追溯链断裂。
+</div>
+
+<!-- ============================================================ -->
+<!-- 7. 现场扫码录入 -->
+<!-- ============================================================ -->
+<h2 id="process-hub">7. 现场扫码录入</h2>
+
+<h3>7.1 模块用途</h3>
+<p>现场扫码录入是操作员的<strong>日常作业主入口</strong>，通过<strong>扫码或选择批次</strong>快速进入对应工序的录入页面，完成工艺参数填报与提交质检。</p>
+
+<h3>7.2 进入方式</h3>
+<p>左侧菜单 → 【现场扫码录入】，路径 <code>/process-hub</code>。</p>
+
+<h3>7.3 页面布局</h3>
+<p>页面顶部为<strong>批次选择区</strong>，中部为<strong>13 道工序入口网格</strong>。</p>
+
+<h3>7.4 进入工序录入</h3>
+<div class="steps">
+  <div class="step-item">点击【选择批次】按钮，弹出批次下拉框（或直接扫描批次号条码）</div>
+  <div class="step-item">选择对应批次后，下方<strong>13 道工序卡片</strong>亮起</div>
+  <div class="step-item">点击目标工序卡片（如"配料"），跳转到工序录入页 <code>/processes/{batchNo}/batching</code></div>
+  <div class="step-item">填写工艺参数 →【保存草稿】或【提交质检】</div>
+</div>
+
+<h3>7.5 通用工序录入流程</h3>
+<p>各工序页面布局一致：</p>
+<ol>
+  <li><strong>顶部</strong>：批次号、当前工序、状态标签</li>
+  <li><strong>中部</strong>：工序表单（按工艺字典动态渲染字段）</li>
+  <li><strong>底部</strong>：【保存草稿】【提交质检】【取消】三个按钮</li>
+</ol>
+
+<h3>7.6 各工序字段说明（重点）</h3>
+
+<h4>7.6.1 配料</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>正极材料批次</td><td>下拉</td><td>关联物料仓库</td></tr>
+<tr><td>负极材料批次</td><td>下拉</td><td>关联物料仓库</td></tr>
+<tr><td>导电剂</td><td>下拉</td><td>关联物料仓库</td></tr>
+<tr><td>粘结剂</td><td>下拉</td><td>关联物料仓库</td></tr>
+<tr><td>配料温度 (℃)</td><td>数值</td><td>标准值 ± 5</td></tr>
+<tr><td>搅拌时长 (min)</td><td>数值</td><td>标准值 ± 10</td></tr>
+<tr><td>备注</td><td>文本</td><td>选填</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>7.6.2 涂布 / 辊压 / 分切</h4>
+<p>主要字段：涂布速度、干燥温度、面密度、压辊压力、分切宽度等。详见【工序主数据】模块中各工序的字段配置。</p>
+
+<h4>7.6.3 制片</h4>
+<p>字段：极片长度、宽度、留白尺寸、极耳位置、检验员、备注等。</p>
+
+<h4>7.6.4 卷绕 / 装配 / 烘烤 / 注液 / 顶封</h4>
+<p>字段以工艺字典为准，必填项带 <span class="tag red">*</span>。</p>
+
+<h4>7.6.5 化成</h4>
+<p>字段：化成电流、化成电压、化成时长、温度、容量初值等。<strong>此工序需质检通过后才能流转到分容</strong>。</p>
+
+<h4>7.6.6 分容</h4>
+<p>字段：分容电流、分容电压、测试时长、容量终值、K 值等。</p>
+
+<h4>7.6.7 分选</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>字段</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>OCV 电压范围</td><td>本次分选允许的电压区间</td></tr>
+<tr><td>内阻范围</td><td>允许的内阻区间</td></tr>
+<tr><td>容量范围</td><td>允许的容量区间</td></tr>
+<tr><td>档位划分</td><td>如 A ≥ 3000mAh，B ≥ 2900mAh 等</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>7.7 提交质检</h3>
+<p>9 道带质检的工序完成后，点击【提交质检】：</p>
+<ul>
+  <li>工序记录状态变为 <span class="tag orange">待质检</span></li>
+  <li>该批次自动出现在【质检管理】待办列表</li>
+  <li>质检员登录后可到【质检管理】完成判定</li>
+</ul>
+
+<h3>7.8 作废记录</h3>
+<p>如发现已提交记录有误，可点击【作废】（仅管理员或本操作员）：</p>
+<ul>
+  <li>记录状态变为 <strong>已作废</strong></li>
+  <li>批次对应工序状态回到 <span class="tag yellow">草稿</span></li>
+  <li>可重新填写并提交</li>
+</ul>
+
+<div class="info-box tip">
+<strong>最佳实践：</strong>每完成一道工序，立即在 MES 录入并提交质检，避免集中补录造成数据失真。
+</div>
+
+<!-- ============================================================ -->
+<!-- 8. Pack 组装录入 -->
+<!-- ============================================================ -->
+<h2 id="pack-entry">8. Pack 组装录入</h2>
+
+<h3>8.1 模块用途</h3>
+<p>用于将分选后的合格电芯<strong>组装成电池包（Pack）</strong>，建立 Pack 与电芯条码的关联关系，便于后续电池组级追溯。</p>
+
+<h3>8.2 进入方式</h3>
+<p>左侧菜单 → 【Pack 录入】，路径 <code>/pack-entry</code>。</p>
+
+<h3>8.3 新建 Pack</h3>
+<div class="steps">
+  <div class="step-item">点击【新建 Pack】按钮</div>
+  <div class="step-item">填写：<strong>Pack 编号</strong>（自动生成，可手改）、<strong>所属批次</strong>（下拉）</div>
+  <div class="step-item">在<strong>电芯条码输入框</strong>中粘贴或扫描电芯条码（每行一个或逗号分隔）</div>
+  <div class="step-item">系统自动校验：条码是否存在、是否同批次、是否已组 Pack</div>
+  <div class="step-item">点击【保存】完成组 Pack</div>
+</div>
+
+<h3>8.4 校验规则</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>校验项</th><th>失败提示</th></tr></thead>
+<tbody>
+<tr><td>电芯必须存在</td><td>电芯条码 XXX 在系统中不存在</td></tr>
+<tr><td>电芯必须同批次</td><td>电芯 XXX 与当前批次不一致</td></tr>
+<tr><td>电芯未被组 Pack</td><td>电芯 XXX 已存在于 Pack YYY</td></tr>
+<tr><td>数量限制</td><td>单个 Pack 电芯数：1 ~ 200</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>8.5 查看 Pack 详情</h3>
+<p>在 Pack 列表中点击任一 Pack 编号，可查看：</p>
+<ul>
+  <li>Pack 基本信息（编号、批次、创建时间、创建人）</li>
+  <li>包含的全部电芯条码</li>
+  <li>每只电芯的容量、内阻、电压、档位</li>
+  <li>导出 Excel</li>
+</ul>
+
+<h3>8.6 修改 Pack</h3>
+<p>仅<strong>创建人</strong>或<strong>管理员</strong>可修改 Pack。点击【编辑】可增删电芯（前提：被增电芯未组 Pack；被删电芯不会从电芯库删除，只解除关联）。</p>
+
+<div class="info-box caution">
+<strong>注意：</strong>已出货的 Pack 不可修改。
+</div>
+
+<!-- ============================================================ -->
+<!-- 9. 质量检验 -->
+<!-- ============================================================ -->
+<h2 id="quality">9. 质量检验</h2>
+
+<h3>9.1 模块用途</h3>
+<p>质检模块是 MES 的<strong>质量管控核心</strong>，所有带质检节点工序的提交记录都需要在此完成<strong>通过 / 驳回</strong>判定。</p>
+
+<h3>9.2 进入方式</h3>
+<p>左侧菜单 → 【质检管理】，路径 <code>/quality</code>。</p>
+
+<h3>9.3 质检待办列表</h3>
+<p>页面默认显示 <strong>待质检</strong> 记录，可按以下条件筛选：</p>
+<ul>
+  <li>工序类型（配料、制片、卷绕、装配、烘烤、注液、顶封、化成、分容）</li>
+  <li>提交时间范围</li>
+  <li>批次号</li>
+  <li>操作员</li>
+</ul>
+
+<h3>9.4 质检判定流程</h3>
+<div class="steps">
+  <div class="step-item">在待办列表中点击任一记录 → 进入<strong>质检详情页</strong></div>
+  <div class="step-item">查看工艺参数、提交时间、操作员、设备信息</div>
+  <div class="step-item">选择<strong>检验结果</strong>：通过 / 驳回</div>
+  <div class="step-item">填写<strong>质检备注</strong>（驳回时必填，写明不合格原因）</div>
+  <div class="step-item">点击【提交】完成判定</div>
+</div>
+
+<h3>9.5 质检结果影响</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>判定</th><th>工序状态变化</th><th>批次状态变化</th></tr></thead>
+<tbody>
+<tr><td><span class="tag green">通过</span></td><td>待质检 → 已通过</td><td>若全部工序通过 → 可标记完成</td></tr>
+<tr><td><span class="tag red">驳回</span></td><td>待质检 → 已驳回</td><td>批次状态变为"质量异常"</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>9.6 异常处理</h3>
+<p>质检驳回后，操作员需在【现场扫码录入】中找到对应工序，<strong>重新填写并提交</strong>。批次状态从"质量异常"恢复后需质检员在批次详情页点击【恢复生产】。</p>
+
+<h3>9.7 质检历史</h3>
+<p>切换 Tab 至【质检历史】，可查看本账号过往的全部质检判定记录，支持按时间、结果、批次号筛选，可导出 Excel。</p>
+
+<div class="info-box success">
+<strong>质检时效：</strong>建议工序提交后 <strong>2 小时内</strong> 完成质检，避免生产等待。
+</div>
+
+<!-- ============================================================ -->
+<!-- 10. 原材料仓库 -->
+<!-- ============================================================ -->
+<h2 id="material">10. 原材料仓库</h2>
+
+<h3>10.1 模块用途</h3>
+<p>原材料仓库用于<strong>登记来料入库信息</strong>，并为工序录入提供物料批次下拉数据源。</p>
+
+<h3>10.2 进入方式</h3>
+<p>从批次详情页或工序录入页【物料字段】旁的【选择物料】按钮进入，亦可在左侧菜单中查找（如未显示请联系管理员分配权限）。</p>
+
+<h3>10.3 物料登记</h3>
+<div class="steps">
+  <div class="step-item">点击【新增物料】按钮</div>
+  <div class="step-item">填写：物料编码、物料名称、规格、单位、来料批次号、来料数量、入库日期、供应商</div>
+  <div class="step-item">点击【保存】完成登记</div>
+</div>
+
+<h3>10.4 物料状态</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>状态</th><th>标签</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td>在库</td><td><span class="tag green">在库</span></td><td>可被工序领用</td></tr>
+<tr><td>锁定</td><td><span class="tag yellow">锁定</span></td><td>疑似异常，禁止领用</td></tr>
+<tr><td>耗尽</td><td><span class="tag gray">耗尽</span></td><td>数量为 0 或已全部领用</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>10.5 物料与批次关联</h3>
+<p>在工序录入时（如配料），操作员选择物料批次后：</p>
+<ul>
+  <li>物料记录被关联到该批次</li>
+  <li>批次详情页可查看本批次使用的全部物料</li>
+</ul>
+
+<div class="info-box tip">
+<strong>建议：</strong>每批来料入库后立即登记，登记时间与来料检验报告时间保持一致。
+</div>
+
+<!-- ============================================================ -->
+<!-- 11. 大屏看板 -->
+<!-- ============================================================ -->
+<h2 id="big-screen">11. 大屏看板</h2>
+
+<h3>11.1 模块用途</h3>
+<p>大屏看板是为<strong>车间大屏 / 监控中心</strong> 设计的可视化展示页面，呈现<strong>实时生产态势</strong>。</p>
+
+<h3>11.2 进入方式</h3>
+<p>左侧菜单 → 【大屏看板】（自动新窗口打开），路径 <code>/big-screen</code>。生产环境访问端口 <code>8081</code>。</p>
+
+<h3>11.3 展示内容</h3>
+
+<h4>11.3.1 顶部标题栏</h4>
+<p>系统名称、当前时间、滚动通知栏（管理员可在【系统配置】中维护）。</p>
+
+<h4>11.3.2 关键指标</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>指标</th><th>展示形式</th><th>数据来源</th></tr></thead>
+<tbody>
+<tr><td>今日产量</td><td>数字翻牌器</td><td>分选入库</td></tr>
+<tr><td>在制批次</td><td>数字翻牌器</td><td>批次状态=生产中</td></tr>
+<tr><td>合格率</td><td>环形进度</td><td>质检通过 / 总数</td></tr>
+<tr><td>设备开机率</td><td>数字翻牌器</td><td>设备运行状态</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>11.3.3 工序进度</h4>
+<p>横向条形图展示当前在制批次在 13 道工序上的完成情况。</p>
+
+<h4>11.3.4 产能趋势</h4>
+<p>折线图：近 30 日每日产量趋势。</p>
+
+<h4>11.3.5 档位分布</h4>
+<p>饼图：A / B / C / D 档电芯占比。</p>
+
+<h4>11.3.6 异常预警</h4>
+<p>列表滚动展示当前 <span class="tag red">质量异常</span> 批次及其异常原因。</p>
+
+<h3>11.4 大屏模式</h3>
+<div class="info-box tip">
+<strong>推荐配置：</strong>
+<ul>
+  <li>硬件：≥ 50 英寸 1080P 显示屏</li>
+  <li>操作系统：Windows 10/11 + Chrome（开机自启动并全屏 <code>F11</code>）</li>
+  <li>网络：与 MES 服务器同一局域网</li>
+</ul>
+</div>
+
+<h3>11.5 自动刷新</h3>
+<p>大屏数据通过<strong>SSE（Server-Sent Events）</strong> 自动推送，每 5 秒更新一次指标，无需手动刷新。</p>
+
+<!-- ============================================================ -->
+<!-- 12. 工序主数据 -->
+<!-- ============================================================ -->
+<h2 id="process-dict">12. 工序主数据</h2>
+
+<h3>12.1 模块用途</h3>
+<p>工序主数据用于<strong>配置 13 道工序的字段定义</strong>，决定工序录入页面的表单结构。仅管理员可访问。</p>
+
+<h3>12.2 进入方式</h3>
+<p>左侧菜单 → 【系统管理】→【工序主数据】，路径 <code>/system/processes</code>。</p>
+
+<h3>12.3 工序字典列表</h3>
+<p>展示 13 道工序的当前配置。每行包含：</p>
+<ul>
+  <li>工序编号（1~13）</li>
+  <li>工序中文名</li>
+  <li>工序英文标识</li>
+  <li>是否启用</li>
+  <li>是否有质检</li>
+  <li>字段数量</li>
+  <li>操作：编辑、停用</li>
+</ul>
+
+<h3>12.4 编辑工序字段</h3>
+<p>点击【编辑】进入工序字段配置页，可配置：</p>
+<ul>
+  <li><strong>字段名称</strong>（中文）</li>
+  <li><strong>字段标识</strong>（英文，作为数据库列名）</li>
+  <li><strong>字段类型</strong>（文本、数值、下拉、日期、布尔）</li>
+  <li><strong>是否必填</strong></li>
+  <li><strong>默认值</strong></li>
+  <li><strong>下拉选项</strong>（字段类型为下拉时）</li>
+  <li><strong>校验规则</strong>（数值范围、正则等）</li>
+  <li><strong>排序</strong></li>
+</ul>
+
+<div class="info-box warning">
+<strong>注意：</strong>修改字段定义会影响所有后续录入的工序记录，<strong>已存在的历史数据不会受影响</strong>。删除字段前请确保无业务依赖。
+</div>
+
+<h3>12.5 启停用工序</h3>
+<p>点击【停用】可将工序标记为不启用，停用后：</p>
+<ul>
+  <li>该工序不再出现在批次进度看板</li>
+  <li>操作员无法新建该工序的草稿</li>
+  <li>历史数据保留可查</li>
+</ul>
+
+<!-- ============================================================ -->
+<!-- 13. 用户与角色 -->
+<!-- ============================================================ -->
+<h2 id="user">13. 用户与角色</h2>
+
+<h3>13.1 用户管理</h3>
+
+<h4>13.1.1 进入方式</h4>
+<p>左侧菜单 → 【系统管理】→【用户管理】，路径 <code>/system/users</code>。仅管理员可访问。</p>
+
+<h4>13.1.2 用户列表</h4>
+<p>展示系统全部用户，包含：</p>
+<ul>
+  <li>用户 ID</li>
+  <li>用户名（登录用）</li>
+  <li>姓名</li>
+  <li>角色（管理员 / 操作员 / 质检员 / 仓库员）</li>
+  <li>手机号</li>
+  <li>状态（启用 / 停用）</li>
+  <li>创建时间</li>
+  <li>操作：编辑、停用、删除、重置密码</li>
+</ul>
+
+<h4>13.1.3 新增用户</h4>
+<p>点击【新增用户】按钮，填写：</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>字段</th><th>是否必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>用户名</td><td>必填</td><td>登录用，全局唯一，4~20 位字母数字</td></tr>
+<tr><td>姓名</td><td>必填</td><td>真实姓名</td></tr>
+<tr><td>初始密码</td><td>必填</td><td>≥ 8 位</td></tr>
+<tr><td>角色</td><td>必填</td><td>下拉选择</td></tr>
+<tr><td>手机号</td><td>选填</td><td>11 位手机号</td></tr>
+<tr><td>部门</td><td>选填</td><td>下拉选择</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>13.1.4 编辑用户</h4>
+<p>点击【编辑】可修改姓名、角色、部门、手机号，<strong>用户名不可修改</strong>。</p>
+
+<h4>13.1.5 重置密码</h4>
+<p>点击【重置密码】，系统将该用户密码重置为 <code>123456</code>，用户下次登录会强制要求修改。</p>
+
+<h4>13.1.6 停用 / 启用</h4>
+<p>点击【停用】，用户状态变为 <span class="tag gray">停用</span>，无法登录；可再次点击【启用】恢复。</p>
+
+<h4>13.1.7 删除用户</h4>
+<p>仅可删除<strong>无任何关联数据</strong>（未创建批次、未提交工序、未做质检）的用户。已存在操作记录的用户应使用【停用】而非【删除】。</p>
+
+<h3>13.2 角色管理</h3>
+
+<h4>13.2.1 进入方式</h4>
+<p>左侧菜单 → 【系统管理】→【角色管理】，路径 <code>/system/roles</code>。</p>
+
+<h4>13.2.2 内置角色</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>角色</th><th>编码</th><th>默认权限</th></tr></thead>
+<tbody>
+<tr><td><span class="badge role-4">管理员</span></td><td>ADMIN</td><td>全部模块 + 用户/角色/部门/设备/日志/配置</td></tr>
+<tr><td><span class="badge role-1">操作员</span></td><td>OPERATOR</td><td>批次、工序录入、物料登记</td></tr>
+<tr><td><span class="badge role-2">质检员</span></td><td>QUALITY</td><td>质检判定、批次查看、电芯追溯</td></tr>
+<tr><td><span class="badge role-3">仓库员</span></td><td>WAREHOUSE</td><td>物料登记、批次查看</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>13.2.3 角色权限配置</h4>
+<p>点击【编辑】可修改角色对应的菜单权限和功能权限（按页面粒度控制）。</p>
+
+<!-- ============================================================ -->
+<!-- 14. 部门管理 -->
+<!-- ============================================================ -->
+<h2 id="department">14. 部门管理</h2>
+
+<h3>14.1 进入方式</h3>
+<p>左侧菜单 → 【系统管理】→【部门管理】，路径 <code>/system/departments</code>。仅管理员可访问。</p>
+
+<h3>14.2 部门树</h3>
+<p>以<strong>树状结构</strong>展示公司组织架构，支持多级部门。每个部门可关联：</p>
+<ul>
+  <li>部门名称</li>
+  <li>部门编码</li>
+  <li>上级部门</li>
+  <li>负责人</li>
+  <li>成员列表（关联用户）</li>
+</ul>
+
+<h3>14.3 新增部门</h3>
+<p>点击【新增部门】，选择上级部门、填写部门名称 / 编码、负责人，点击【保存】。</p>
+
+<h3>14.4 部门与用户</h3>
+<p>用户可归属一个部门。在【用户管理】中编辑用户时选择所属部门即可。部门在工序录入、质检等场景仅作为信息展示字段，不参与权限控制。</p>
+
+<!-- ============================================================ -->
+<!-- 15. 设备管理 -->
+<!-- ============================================================ -->
+<h2 id="equipment">15. 设备管理</h2>
+
+<h3>15.1 进入方式</h3>
+<p>左侧菜单 → 【系统管理】→【设备管理】，路径 <code>/system/equipment</code>。仅管理员可访问。</p>
+
+<h3>15.2 设备台账</h3>
+<p>展示车间全部生产设备，每条记录包含：</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>字段</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>设备编号</td><td>唯一标识</td></tr>
+<tr><td>设备名称</td><td>如"涂布机 A"</td></tr>
+<tr><td>工序归属</td><td>关联工序主数据</td></tr>
+<tr><td>型号规格</td><td>设备厂家型号</td></tr>
+<tr><td>购置日期</td><td>—</td></tr>
+<tr><td>状态</td><td>在用 / 维修 / 报废</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>15.3 设备与工序关联</h3>
+<p>在工序录入时，操作员可从设备下拉中选择当前使用的设备，该信息会记录到工序详情中，便于追溯"哪台设备生产的哪个批次"。</p>
+
+<!-- ============================================================ -->
+<!-- 16. 操作与接口日志 -->
+<!-- ============================================================ -->
+<h2 id="logs">16. 操作与接口日志</h2>
+
+<h3>16.1 操作日志</h3>
+<p>左侧菜单 → 【系统管理】→【操作日志】，路径 <code>/system/logs</code>。</p>
+<p>系统自动记录所有用户的<strong>关键操作</strong>，包括：</p>
+<ul>
+  <li>登录 / 登出</li>
+  <li>新建 / 修改 / 删除批次</li>
+  <li>工序记录保存 / 提交 / 作废</li>
+  <li>质检判定</li>
+  <li>用户与权限变更</li>
+</ul>
+
+<p>支持按<strong>操作员、操作类型、时间范围</strong> 筛选，可导出 Excel 供审计。</p>
+
+<h3>16.2 接口日志（分选机对接）</h3>
+<p>左侧菜单 → 【系统管理】→【接口日志】，路径 <code>/system/sorter-logs</code>。</p>
+<p>记录<strong>分选机上传电芯数据</strong> 的每一次接口调用：</p>
+<ul>
+  <li>请求时间、IP 地址</li>
+  <li>请求 / 响应内容</li>
+  <li>处理结果（成功 / 失败 / 部分失败）</li>
+  <li>失败原因（如数据超界）</li>
+</ul>
+<p>用于排查分选机对接异常与审计数据上传历史。</p>
+
+<div class="info-box tip">
+<strong>数据保留：</strong>日志保留 180 天，超期自动清理（可在【系统配置】调整）。
+</div>
+
+<!-- ============================================================ -->
+<!-- 17. 系统配置 -->
+<!-- ============================================================ -->
+<h2 id="settings">17. 系统配置</h2>
+
+<h3>17.1 进入方式</h3>
+<p>左侧菜单 → 【系统管理】→【系统配置】，路径 <code>/system/settings</code>。仅管理员可访问。</p>
+
+<h3>17.2 配置项</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>配置项</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>系统名称</td><td>页面顶部显示的标题</td></tr>
+<tr><td>公司 Logo</td><td>登录页 Logo 图片</td></tr>
+<tr><td>首页公告</td><td>登录页与工作台公告</td></tr>
+<tr><td>大屏通知栏</td><td>大屏顶部滚动通知内容</td></tr>
+<tr><td>批次号生成规则</td><td>前缀 + 日期格式 + 流水号位数</td></tr>
+<tr><td>质检自动通过阈值</td><td>系统级辅助参考值（实际以质检员判定为准）</td></tr>
+<tr><td>日志保留天数</td><td>180~365 可调</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>17.3 修改配置</h3>
+<p>点击【编辑】，修改后点击【保存】生效。部分配置（如 Logo）需要刷新页面才能看到效果。</p>
+
+<!-- ============================================================ -->
+<!-- A. 术语表 -->
+<!-- ============================================================ -->
+<h2 id="glossary">A. 术语表</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>术语</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td><span class="glossary-term">MES</span></td><td>Manufacturing Execution System，制造执行系统</td></tr>
+<tr><td><span class="glossary-term">批次 (Batch)</span></td><td>同一时间、同一型号、同一工艺参数下生产的产品集合，对应唯一批次号</td></tr>
+<tr><td><span class="glossary-term">电芯条码 (Cell Barcode)</span></td><td>每只电芯的唯一标识，由分选机生成并上传到 MES</td></tr>
+<tr><td><span class="glossary-term">工序记录 (Process Record)</span></td><td>批次在某个工序上的工艺参数记录</td></tr>
+<tr><td><span class="glossary-term">质检 (Quality Check)</span></td><td>关键工序的检验节点，决定工序是否合格</td></tr>
+<tr><td><span class="glossary-term">OCV</span></td><td>Open Circuit Voltage，开路电压，化成后电芯的电压测量值</td></tr>
+<tr><td><span class="glossary-term">K 值</span></td><td>同一电芯 OCV1 与 OCV2 电压差除以时间差（天），用于评估电芯电压变化速率</td></tr>
+<tr><td><span class="glossary-term">Pack</span></td><td>电池包，由多只电芯组装而成</td></tr>
+<tr><td><span class="glossary-term">分选档位 (Grade)</span></td><td>电芯按容量/内阻分级的结果：A/B/C/D</td></tr>
+<tr><td><span class="glossary-term">RBAC</span></td><td>Role-Based Access Control，基于角色的访问控制</td></tr>
+<tr><td><span class="glossary-term">JWT</span></td><td>JSON Web Token，本系统用于身份认证的令牌</td></tr>
+<tr><td><span class="glossary-term">SSE</span></td><td>Server-Sent Events，服务端推送，本系统大屏数据实时更新技术</td></tr>
+<tr><td><span class="glossary-term">SOP</span></td><td>Standard Operating Procedure，标准作业程序</td></tr>
+<tr><td><span class="glossary-term">AQL</span></td><td>Acceptance Quality Limit，接收质量限，抽样检验标准</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<!-- B. 角色权限对照 -->
+<!-- ============================================================ -->
+<h2 id="roles">B. 角色权限对照</h2>
+<p>下表标识"Y"表示该角色可访问对应模块，"N"表示无权限。</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>模块</th><th><span class="badge role-4">管理员</span></th><th><span class="badge role-1">操作员</span></th><th><span class="badge role-2">质检员</span></th><th><span class="badge role-3">仓库员</span></th></tr></thead>
+<tbody>
+<tr><td>仪表盘</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td></tr>
+<tr><td>批次管理</td><td>Y</td><td>Y（创建/编辑）</td><td>Y（只读）</td><td>Y（只读）</td></tr>
+<tr><td>现场扫码录入</td><td>Y</td><td>Y</td><td>N</td><td>N</td></tr>
+<tr><td>质检管理</td><td>Y</td><td>N</td><td>Y</td><td>N</td></tr>
+<tr><td>电芯追溯</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td></tr>
+<tr><td>Pack 录入</td><td>Y</td><td>Y</td><td>N</td><td>N</td></tr>
+<tr><td>原材料仓库</td><td>Y</td><td>Y</td><td>N</td><td>Y</td></tr>
+<tr><td>大屏看板</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td></tr>
+<tr><td>工序主数据</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+<tr><td>用户管理</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+<tr><td>角色管理</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+<tr><td>部门管理</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+<tr><td>设备管理</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+<tr><td>操作日志</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+<tr><td>接口日志</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+<tr><td>系统配置</td><td>Y</td><td>N</td><td>N</td><td>N</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<!-- C. 状态编码说明 -->
+<!-- ============================================================ -->
+<h2 id="status">C. 状态编码说明</h2>
+
+<h3>C.1 批次状态编码</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>编码</th><th>名称</th><th>颜色标签</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>DRAFT 草稿</td><td><span class="tag gray">草稿</span></td></tr>
+<tr><td>2</td><td>IN_PROGRESS 生产中</td><td><span class="tag blue">生产中</span></td></tr>
+<tr><td>3</td><td>COMPLETED 已完成</td><td><span class="tag green">已完成</span></td></tr>
+<tr><td>4</td><td>CLOSED 已关闭</td><td><span class="tag gray">已关闭</span></td></tr>
+<tr><td>5</td><td>QUALITY_ISSUE 质量异常</td><td><span class="tag red">质量异常</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>C.2 工序记录状态编码</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>编码</th><th>名称</th><th>颜色标签</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>NOT_STARTED 未开始</td><td><span class="tag gray">未开始</span></td></tr>
+<tr><td>1</td><td>DRAFT 草稿</td><td><span class="tag yellow">草稿</span></td></tr>
+<tr><td>2</td><td>VOIDED 已作废</td><td><span class="tag gray">已作废</span></td></tr>
+<tr><td>3</td><td>PENDING_QUALITY 待质检</td><td><span class="tag orange">待质检</span></td></tr>
+<tr><td>4</td><td>QUALITY_PASSED 已通过</td><td><span class="tag green">已通过</span></td></tr>
+<tr><td>5</td><td>QUALITY_REJECTED 已驳回</td><td><span class="tag red">已驳回</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>C.3 角色编码</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>编码</th><th>名称</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>OPERATOR 操作员</td></tr>
+<tr><td>2</td><td>QUALITY 质检员</td></tr>
+<tr><td>3</td><td>WAREHOUSE 仓库员</td></tr>
+<tr><td>4</td><td>ADMIN 管理员</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>C.4 分选档位编码</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>编码</th><th>名称</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>A</td><td>A 档</td><td>容量、内阻均最优</td></tr>
+<tr><td>B</td><td>B 档</td><td>次优</td></tr>
+<tr><td>C</td><td>C 档</td><td>合格下限</td></tr>
+<tr><td>D</td><td>D 档</td><td>边缘档（具体定义以工序字典为准）</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<!-- D. 常见问题 FAQ -->
+<!-- ============================================================ -->
+<h2 id="faq">D. 常见问题 FAQ</h2>
+
+<h4>Q1: 忘记密码怎么办？</h4>
+<p>联系系统管理员，由管理员在【系统管理 → 用户管理】中点击【重置密码】，重置后密码为 <code>123456</code>，首次登录强制修改。</p>
+
+<h4>Q2: 登录后页面 401 报错或自动跳转回登录页？</h4>
+<p>可能原因：(1) Token 过期，重新登录即可；(2) 账号被管理员停用，请联系管理员。</p>
+
+<h4>Q3: 新建批次后，找不到对应的工序入口？</h4>
+<p>在【现场扫码录入】页面，先选择批次，再点击下方亮起的工序卡片。请确认批次状态为"生产中"。</p>
+
+<h4>Q4: 提交质检后多久能查到质检结果？</h4>
+<p>实时生效。质检员完成判定后，该批次对应工序状态立即变更。可在【批次详情】或【质检管理 → 质检历史】中查询。</p>
+
+<h4>Q5: 分选机上传的电芯数据没有出现在批次里？</h4>
+<p>检查：(1) 电芯条码是否完整；(2) 该批次是否处于"生产中"或"已完成"状态；(3) 进入【系统管理 → 接口日志】查看上传日志，确认接口调用是否成功。</p>
+
+<h4>Q6: 工序录入字段填写错误，能否修改？</h4>
+<p>草稿状态下可直接修改。已提交（待质检）的记录需先作废（管理员或本人），再重新填写。已质检通过的记录不可修改，如需调整请走返工流程。</p>
+
+<h4>Q7: Pack 录入时提示"电芯不存在"？</h4>
+<p>说明该电芯条码尚未通过分选机上传到 MES，需先完成分选工序并由分选机上传数据。</p>
+
+<h4>Q8: 大屏看板不显示数据？</h4>
+<p>检查：(1) 网络是否可达 MES 服务器；(2) 是否登录了系统（大屏页通常无需登录，但首次访问可能要求鉴权）；(3) 系统时间是否正确（SSE 连接受时间影响）。</p>
+
+<h4>Q9: 角色权限不够，如何申请？</h4>
+<p>联系系统管理员，由管理员在【用户管理】中修改用户的角色。</p>
+
+<h4>Q10: 工序字段如何新增？</h4>
+<p>管理员进入【系统管理 → 工序主数据】，选择对应工序，点击【编辑字段】，新增字段并保存。新字段立即在工序录入页生效。</p>
+
+<h4>Q11: 数据保留多久？会丢失吗？</h4>
+<p>批次、工序、质检、电芯数据<strong>永久保留</strong>。日志类数据保留 180~365 天（可在系统配置中调整）。建议重要数据定期使用【导出】功能备份。</p>
+
+<h4>Q12: 移动端能否使用？</h4>
+<p>本系统主要面向 PC 浏览器（≥1366×768）。移动端适配不完整，部分表格与图表可能显示异常，建议使用 PC 操作。</p>
+
+<h4>Q13: 系统支持哪些硬件对接？</h4>
+<p>当前支持：分选机（通过标准 HTTP 接口上传电芯数据）。后续可扩展 OCV 测试机、注液机等设备。</p>
+
+<!-- ============================================================ -->
+<!-- E. 操作快捷指引 -->
+<!-- ============================================================ -->
+<h2 id="shortcuts">E. 操作快捷指引</h2>
+
+<h3>E.1 常用键盘操作</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>快捷键</th><th>功能</th><th>适用场景</th></tr></thead>
+<tbody>
+<tr><td><code>Enter</code></td><td>提交搜索 / 确认</td><td>登录、查询、对话框</td></tr>
+<tr><td><code>Esc</code></td><td>关闭弹窗</td><td>任何弹窗 / 对话框</td></tr>
+<tr><td><code>Tab</code></td><td>切换字段</td><td>表单录入</td></tr>
+<tr><td><code>F5</code></td><td>刷新当前页</td><td>数据未更新时</td></tr>
+<tr><td><code>F11</code></td><td>浏览器全屏</td><td>大屏看板展示</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>E.2 标准作业流程（SOP 速查）</h3>
+
+<h4>SOP-01：新建批次并投产</h4>
+<div class="steps">
+  <div class="step-item">【批次管理】→【新建批次】→ 填写批次号、型号、数量 → 保存</div>
+  <div class="step-item">【现场扫码录入】→ 选择批次 → 进入"配料"工序</div>
+  <div class="step-item">填写配料参数 →【提交质检】</div>
+</div>
+
+<h4>SOP-02：完成一道工序并提交质检</h4>
+<div class="steps">
+  <div class="step-item">【现场扫码录入】→ 选择批次 → 点击工序卡片</div>
+  <div class="step-item">填写工艺参数 →【保存草稿】（可选，用于暂存）</div>
+  <div class="step-item">确认无误 →【提交质检】→ 状态变为"待质检"</div>
+</div>
+
+<h4>SOP-03：质检员完成判定</h4>
+<div class="steps">
+  <div class="step-item">【质检管理】→ 选择"待质检"记录 → 点击进入详情</div>
+  <div class="step-item">查看工艺参数 → 选择"通过"或"驳回"</div>
+  <div class="step-item">填写备注 →【提交】</div>
+</div>
+
+<h4>SOP-04：电芯反查追溯</h4>
+<div class="steps">
+  <div class="step-item">【电芯追溯】→ 扫描或输入电芯条码 →【查询】</div>
+  <div class="step-item">查看该电芯的全部工序、参数、质检结果</div>
+  <div class="step-item">如需追溯同批次 → 点击"查看该批次全部电芯"</div>
+</div>
+
+<h4>SOP-05：新建 Pack</h4>
+<div class="steps">
+  <div class="step-item">【Pack 录入】→【新建 Pack】→ 填写 Pack 编号、选择批次</div>
+  <div class="step-item">扫描或粘贴电芯条码 → 系统校验</div>
+  <div class="step-item">校验通过 →【保存】</div>
+</div>
+
+<h4>SOP-06：新增用户</h4>
+<div class="steps">
+  <div class="step-item">【系统管理 → 用户管理】→【新增用户】</div>
+  <div class="step-item">填写用户名、姓名、初始密码、角色、部门</div>
+  <div class="step-item">【保存】→ 通知用户登录并修改初始密码</div>
+</div>
+
+<h3>E.3 联系支持</h3>
+<div class="feature-box">
+<h4>技术支持联系方式</h4>
+<ul>
+  <li><strong>现场 IT 支持</strong>：联系车间 IT 工程师</li>
+  <li><strong>系统问题反馈</strong>：在工作台右上角头像菜单中点击【反馈问题】（开发中）</li>
+  <li><strong>紧急联系电话</strong>：见车间公告板</li>
+</ul>
+<p style="margin-top:12px;">文档版本：v1.0 &nbsp;|&nbsp; 适用系统版本：YT-MES v1.0 &nbsp;|&nbsp; 更新日期：2026-08-11</p>
+</div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  // 侧边栏高亮当前章节
+  const links = document.querySelectorAll('.sidebar-nav a');
+  const sections = document.querySelectorAll('h2[id]');
+
+  function setActive(id) {
+    links.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+    });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        setActive(entry.target.id);
+      }
+    });
+  }, { rootMargin: '-30% 0px -65% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT-MES OCV1/OCV2 接口与追溯优化方案</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #5b667a;
+      --line: #dfe5ee;
+      --surface: #ffffff;
+      --surface-alt: #f5f7fb;
+      --blue: #1d4ed8;
+      --blue-soft: #eff6ff;
+      --green: #047857;
+      --green-soft: #ecfdf5;
+      --amber: #a16207;
+      --amber-soft: #fffbeb;
+      --red: #b91c1c;
+      --red-soft: #fef2f2;
+      --code: #111827;
+      --code-ink: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--surface-alt);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+        "PingFang SC", "Noto Sans SC", sans-serif;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+    .header {
+      padding: 42px 24px 36px;
+      color: #ffffff;
+      background: #172554;
+      border-bottom: 4px solid #60a5fa;
+    }
+    .header-inner, .container {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+    .eyebrow {
+      margin-bottom: 8px;
+      color: #bfdbfe;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, h4 { line-height: 1.35; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); }
+    h2 {
+      margin: 46px 0 16px;
+      padding-bottom: 9px;
+      border-bottom: 2px solid var(--blue);
+      font-size: 25px;
+    }
+    h2:first-child { margin-top: 0; }
+    h3 { margin: 30px 0 10px; font-size: 19px; }
+    h4 { margin: 22px 0 8px; font-size: 16px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 8px 0 16px; padding-left: 24px; }
+    li { margin: 4px 0; }
+    .subtitle {
+      margin: 12px 0 0;
+      color: #dbeafe;
+      font-size: 16px;
+    }
+    .status {
+      display: inline-block;
+      margin-top: 18px;
+      padding: 4px 12px;
+      color: #dcfce7;
+      background: rgba(4, 120, 87, 0.35);
+      border: 1px solid rgba(167, 243, 208, 0.55);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .container { padding: 34px 0 80px; }
+    .section { margin-bottom: 8px; }
+    .callout {
+      margin: 16px 0 22px;
+      padding: 15px 18px;
+      border-left: 4px solid;
+      border-radius: 6px;
+      background: var(--surface);
+    }
+    .callout.success { color: #065f46; background: var(--green-soft); border-color: var(--green); }
+    .callout.info { color: #1e3a8a; background: var(--blue-soft); border-color: var(--blue); }
+    .callout.warning { color: #78350f; background: var(--amber-soft); border-color: var(--amber); }
+    .callout.danger { color: #7f1d1d; background: var(--red-soft); border-color: var(--red); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+    .metric, .task, .decision {
+      padding: 17px 18px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+    .metric strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 22px;
+      color: var(--blue);
+    }
+    .metric span { color: var(--muted); font-size: 13px; }
+    .table-wrap {
+      margin: 16px 0 22px;
+      overflow-x: auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 13px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      color: #334155;
+      background: #eef2f7;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: 0; }
+    code {
+      padding: 1px 4px;
+      color: #1e3a8a;
+      background: #eff6ff;
+      border-radius: 3px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+    }
+    pre {
+      margin: 13px 0 20px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      color: var(--code-ink);
+      background: var(--code);
+      border-radius: 7px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .task {
+      margin: 18px 0;
+      border-left: 4px solid #60a5fa;
+    }
+    .task h3 { margin-top: 0; }
+    .task h3 span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 400;
+    }
+    .files {
+      margin: 8px 0 14px;
+      padding: 10px 14px;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .checklist {
+      margin: 10px 0 0;
+      padding-left: 22px;
+      list-style: none;
+    }
+    .checklist li::before {
+      content: "□";
+      display: inline-block;
+      width: 22px;
+      margin-left: -22px;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .tag {
+      display: inline-block;
+      margin: 0 5px 5px 0;
+      padding: 2px 8px;
+      color: #1e3a8a;
+      background: #dbeafe;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 46px;
+      padding-top: 16px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+    }
+    @media (max-width: 760px) {
+      .header-inner, .container { width: min(100% - 28px, 1120px); }
+      .header { padding: 30px 0 28px; }
+      .grid { grid-template-columns: 1fr; }
+      h2 { margin-top: 34px; font-size: 22px; }
+      th, td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="eyebrow">YT-MES / implementation plan</div>
+      <h1>OCV1 / OCV2 接口与追溯优化方案</h1>
+      <p class="subtitle">范围收敛版 · 2026-08-05 · 面向数据准确保存与电芯追溯</p>
+      <span class="status">方案已确认，待实施</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <h2>1. 方案结论</h2>
+      <div class="callout success">
+        本期只解决 OCV1、OCV2 两类业务接口及其必要的追溯展示。每类接口保留现有单条和批量路径，
+        不把系统改造成严格的工序状态机。数据写入必须保证批次归属、测量字段、测试时间和审计信息准确；
+        工序顺序只用于展示。
+      </div>
+      <div class="grid">
+        <div class="metric"><strong>2</strong><span>业务接口：OCV1、OCV2</span></div>
+        <div class="metric"><strong>1000</strong><span>单次批量上传最大记录数</span></div>
+        <div class="metric"><strong>32</strong><span>批次号最大字符数</span></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>项目</th><th>本期决定</th></tr></thead>
+          <tbody>
+            <tr><td>当前值</td><td><code>cell_barcode</code> 保存 OCV1/OCV2 当前快照，正常电芯追溯只展示最新一次。</td></tr>
+            <tr><td>审计历史</td><td>继续使用 <code>ocv1_record</code>、<code>ocv2_record</code> 扩展保存每次有效上传和原始报文；不新增第三套 OCV 业务接口。</td></tr>
+            <tr><td>数据时序</td><td>按设备 <code>testTime</code> 判断新旧；更早的迟到数据不保存；相同时间以后接收的数据作为当前值。</td></tr>
+            <tr><td>过程控制</td><td>允许 OCV 早于其他工序上传，不检查前置工序，不接入人工质检闸门。</td></tr>
+            <tr><td>接口兼容</td><td>保留现有 URL 和单条/批量调用方式；批量允许有效记录保存、无效记录返回失败明细。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2. 已确认业务规则</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>分类</th><th>确认规则</th><th>实现要求</th></tr></thead>
+          <tbody>
+            <tr><td>标识</td><td>批次号、电芯码、Pack 码统一去除首尾空格并转换为大写。</td><td>新数据写入前统一规范化；历史数据迁移时统一大写，发生冲突则暂停迁移并输出清单。</td></tr>
+            <tr><td>批次号</td><td>全链路最大 32 个字符。</td><td>数据库相关 <code>batch_no</code> 扩展为 <code>NVARCHAR(32)</code>；DTO、路由参数和文档同步。</td></tr>
+            <tr><td>批次存在</td><td>批次不存在时提示不存在，不保存 OCV 数据。</td><td>单条请求返回批次错误；批量请求将该记录列入失败明细。</td></tr>
+            <tr><td>电芯创建</td><td>电芯码不存在时，按已存在批次创建电芯记录。</td><td>仅创建必要的半成品电芯记录，不能覆盖其他工序字段。</td></tr>
+            <tr><td>批次归属</td><td>已有电芯属于其他批次时拒绝本次上传，原批次保持不变。</td><td>在事务内锁定电芯并校验，禁止静默改写 <code>cell_barcode.batch_no</code>。</td></tr>
+            <tr><td>测量字段</td><td>OCV1 要求电压、内阻；OCV2 还要求 K 值。电压单位为 V，内阻为 mΩ，K 值为 mV/h。</td><td>拒绝缺失、非数字、无穷大和超出允许范围的值；不截断、不夹紧。</td></tr>
+            <tr><td>时间</td><td>只接受带时区的 ISO 8601；未来时间只要格式正确即接受。</td><td>示例：<code>2026-08-05T18:38:15+08:00</code>。缺失或格式错误直接拒绝。</td></tr>
+            <tr><td>重复时间</td><td>同一电芯同一工序的相同 <code>testTime</code>，后接收的数据作为当前值。</td><td>历史记录仍按有效上传逐条保存；当前快照比较 <code>testTime</code>、<code>receivedAt</code>、<code>id</code>。</td></tr>
+            <tr><td>迟到数据</td><td>比当前快照更早的 <code>testTime</code> 不保存。</td><td>不插入审计行、不更新快照，并在批量失败明细中说明原因。</td></tr>
+            <tr><td>eventId</td><td>每条测量记录可带独立 <code>eventId</code>；没有时每次上传都保存新记录。</td><td>相同 ID、相同内容返回首次结果且不新增；相同 ID、内容不同返回事件冲突。</td></tr>
+            <tr><td>批量</td><td>最多 1000 条；有效记录保存，无效记录单独返回。</td><td>有失败时 HTTP 400，但响应必须包含成功和失败明细；设备只重试失败记录。</td></tr>
+            <tr><td>原始报文</td><td>长期保存原始报文和解析后的字段。</td><td>每条有效或失败记录都进入接口日志；有效记录的原始报文同时写入 OCV 审计表。</td></tr>
+            <tr><td>设备编号</td><td><code>equipmentCode</code> 可为空。</td><td>为空时保存 NULL，不写入虚假默认值。</td></tr>
+            <tr><td>OCV2 K 值</td><td>OCV2 K 值与分选 K 值分开保存。</td><td>新增 <code>cell_barcode.ocv2_k_value</code>；本期不使用 OCV2 覆盖分选最终 <code>k_value</code>。</td></tr>
+            <tr><td>接口安全</td><td>接口暂保持公开，部署依赖网络隔离。</td><td>保留请求体大小、超时、失败日志和来源信息控制；本期不增加 API Key。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3. 本期范围与边界</h2>
+      <h3>3.1 本期包含</h3>
+      <div class="decision">
+        <span class="tag">OCV1</span>
+        <span class="tag">OCV2</span>
+        <span class="tag">快照</span>
+        <span class="tag">审计</span>
+        <span class="tag">批次号 32 位</span>
+        <span class="tag">只读流程展示</span>
+        <ul>
+          <li>保留四条现有路径：单条和批量 OCV1、单条和批量 OCV2。</li>
+          <li>修复 OCV 多行记录被批次级查询覆盖或 JSON 解析失败的问题。</li>
+          <li>按电芯码追溯显示当前 OCV1/OCV2 快照。</li>
+          <li>批次页面显示有当前 OCV 快照的电芯数量和批次电芯总数。</li>
+          <li>流程展示统一为 <code>grading → ocv1 → ocv2 → sorting</code>，OCV 只读。</li>
+          <li>OCV 不进入人工草稿、提交质检和待质检列表。</li>
+        </ul>
+      </div>
+      <h3>3.2 本期不包含</h3>
+      <div class="callout warning">
+        这些事项已经确认了目标规则，但不作为本次两个 OCV 业务接口的阻塞项，避免把接口上线扩大成全系统重构。
+      </div>
+      <ul>
+        <li>Pack 待解析关联、有效 Pack 释放和 Pack 重组历史的完整实现。</li>
+        <li>分选接口异常数值夹紧逻辑的全面改造。</li>
+        <li>13 个人工工序的数据模型重构。</li>
+        <li>完整工序状态机和前置工序强校验。</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>4. 目标数据模型</h2>
+      <h3>4.1 数据职责</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>数据对象</th><th>职责</th><th>读取方式</th></tr></thead>
+          <tbody>
+            <tr><td><code>cell_barcode</code></td><td>每个电芯每个 OCV 工序的当前最新快照。</td><td>普通电芯追溯、批次电芯列表。</td></tr>
+            <tr><td><code>ocv1_record</code></td><td>OCV1 每次有效上传的审计记录。</td><td>管理员审计查询、批次当前记录兼容查询。</td></tr>
+            <tr><td><code>ocv2_record</code></td><td>OCV2 每次有效上传的审计记录，包含 K 值。</td><td>管理员审计查询、批次当前记录兼容查询。</td></tr>
+            <tr><td>接口日志</td><td>成功、重复、失败的原始请求和处理结果。</td><td>管理员排查设备重试、参数错误和批量部分失败。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>4.2 OCV 记录字段</h3>
+      <p>在现有 OCV 表上增加下列兼容字段。新增字段允许 NULL，是为了保留已经存在的旧记录；新接口写入时必须满足接口校验。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>字段</th><th>类型</th><th>OCV1</th><th>OCV2</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>barcode</code></td><td>NVARCHAR(32)</td><td>是</td><td>是</td><td>新记录必有；旧记录可能为 NULL。</td></tr>
+            <tr><td><code>voltage</code></td><td>DECIMAL(12,4)</td><td>是</td><td>是</td><td>测量电压，单位 V。</td></tr>
+            <tr><td><code>internal_resistance</code></td><td>DECIMAL(12,2)</td><td>是</td><td>是</td><td>测量内阻，单位 mΩ。</td></tr>
+            <tr><td><code>k_value</code></td><td>DECIMAL(12,4)</td><td>否</td><td>是</td><td>OCV2 K 值，单位 mV/h。</td></tr>
+            <tr><td><code>test_time</code></td><td>DATETIME2</td><td>是</td><td>是</td><td>设备测试时间。</td></tr>
+            <tr><td><code>received_at</code></td><td>DATETIME2</td><td>是</td><td>是</td><td>MES 接收时间。</td></tr>
+            <tr><td><code>source_event_id</code></td><td>NVARCHAR(64)</td><td>可选</td><td>可选</td><td>有值时在对应 OCV 表内唯一。</td></tr>
+            <tr><td><code>payload_hash</code></td><td>CHAR(64)</td><td>是</td><td>是</td><td>规范化字段的 SHA-256，用于判断相同 ID 的内容是否一致。</td></tr>
+            <tr><td><code>raw_payload</code></td><td>NVARCHAR(MAX)</td><td>是</td><td>是</td><td>长期保存的单条原始报文。</td></tr>
+            <tr><td><code>ocv_voltage_min/max</code></td><td>原有类型</td><td>兼容</td><td>兼容</td><td>新记录将测量电压同时写入两列，避免旧页面失去数据。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>4.3 快照更新规则</h3>
+      <pre><code>读取对应电芯当前快照
+先处理 eventId：
+  相同 eventId + 相同 payloadHash：返回首次结果，不新增记录
+  相同 eventId + 不同 payloadHash：拒绝，返回 OCV_EVENT_CONFLICT
+
+如果当前快照存在：
+  incoming.testTime &lt; current.testTime：拒绝，不插入历史，不更新快照
+  incoming.testTime == current.testTime：插入历史，并以本次接收值更新快照
+  incoming.testTime &gt; current.testTime：插入历史，并更新快照
+
+如果当前快照不存在：
+  插入历史，并建立当前快照</code></pre>
+      <p>历史行和当前快照必须在同一个数据库事务中提交。设备时间未来不单独拒绝，只要满足带时区的 ISO 8601 格式和字段校验。</p>
+    </section>
+
+    <section class="section">
+      <h2>5. 接口契约</h2>
+      <h3>5.1 路径</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>POST</td><td><code>/api/cells/ocv1-upload</code></td><td>OCV1 单条上传。</td></tr>
+            <tr><td>POST</td><td><code>/api/cells/ocv1-upload/bulk</code></td><td>OCV1 批量上传，最多 1000 条。</td></tr>
+            <tr><td>POST</td><td><code>/api/cells/ocv2-upload</code></td><td>OCV2 单条上传。</td></tr>
+            <tr><td>POST</td><td><code>/api/cells/ocv2-upload/bulk</code></td><td>OCV2 批量上传，最多 1000 条。</td></tr>
+            <tr><td>GET</td><td><code>/api/admin/ocv/records</code></td><td>管理员分页查询 OCV 审计历史。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>5.2 请求字段</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>字段</th><th>OCV1</th><th>OCV2</th><th>规则</th></tr></thead>
+          <tbody>
+            <tr><td><code>batchNo</code></td><td>必填</td><td>必填</td><td>去首尾空格、转大写，最多 32 个字符，批次必须存在。</td></tr>
+            <tr><td><code>barcode</code></td><td>必填</td><td>必填</td><td>去首尾空格、转大写，最多 32 个字符。</td></tr>
+            <tr><td><code>voltage</code></td><td>必填</td><td>必填</td><td>有限数字，单位 V，不能静默修正。</td></tr>
+            <tr><td><code>internalResistance</code> / <code>resistance</code></td><td>二选一</td><td>二选一</td><td>有限数字，单位 mΩ；统一转换为 <code>internalResistance</code>。</td></tr>
+            <tr><td><code>kValue</code></td><td>不适用</td><td>必填</td><td>有限数字，单位 mV/h。</td></tr>
+            <tr><td><code>testTime</code></td><td>必填</td><td>必填</td><td>带时区的 ISO 8601。</td></tr>
+            <tr><td><code>equipmentCode</code></td><td>可选</td><td>可选</td><td>最多 64 个字符，缺失保存 NULL。</td></tr>
+            <tr><td><code>eventId</code></td><td>可选</td><td>可选</td><td>最多 64 个字符；每条测量记录独立使用。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>5.3 返回规则</h3>
+      <p>单条成功继续返回当前电芯快照，避免影响现有设备客户端。批量成功时 <code>data</code> 保持为成功快照数组，<code>meta</code> 增加计数和失败明细。</p>
+      <pre><code>{
+  "success": true,
+  "data": [
+    { "barcode": "CELL001", "batchNo": "BATCH20260805", "ocv1Voltage": 3.685 }
+  ],
+  "message": "批量OCV1测试数据接收成功",
+  "meta": {
+    "accepted": 1,
+    "duplicate": 0,
+    "rejected": []
+  }
+}</code></pre>
+      <p>批量存在失败记录时，已经保存的有效记录不回滚，接口返回 HTTP 400，并保留成功数据和失败明细：</p>
+      <pre><code>{
+  "success": false,
+  "data": [
+    { "barcode": "CELL001", "batchNo": "BATCH20260805", "ocv1Voltage": 3.685 }
+  ],
+  "message": "批量OCV1部分记录未接收",
+  "error": {
+    "code": "OCV_PARTIAL_FAILURE",
+    "rejected": [
+      {
+        "index": 1,
+        "barcode": "CELL002",
+        "code": "OCV_STALE_TEST_TIME",
+        "message": "测试时间早于当前快照"
+      }
+    ]
+  },
+  "meta": { "accepted": 1, "duplicate": 0, "rejected": 1 }
+}</code></pre>
+      <p>相同 <code>eventId</code> 且内容一致的重试返回 HTTP 200，并在 <code>meta.duplicate</code> 中计数；相同 ID 内容不同返回 HTTP 409。</p>
+    </section>
+
+    <section class="section">
+      <h2>6. 实施计划</h2>
+
+      <article class="task">
+        <h3>Task 0：建立基线和共享规则 <span>预计先完成，避免改动遗漏</span></h3>
+        <div class="files">Create: server/src/common/constants/field-limits.ts
+Create: server/src/common/identifiers/normalize-identifier.ts
+Modify: server/src/cells/dto/ocv1-upload.dto.ts
+Modify: server/src/cells/dto/ocv2-upload.dto.ts
+Modify: server/src/cells/dto/bulk-ocv1-upload.dto.ts
+Modify: server/src/cells/dto/bulk-ocv2-upload.dto.ts
+Modify: all server DTOs and entities containing batchNo
+Test: server/src/common/constants/field-limits.spec.ts</div>
+        <ul class="checklist">
+          <li>新增 <code>BATCH_NO_MAX_LENGTH = 32</code>，所有 DTO 使用共享常量。</li>
+          <li>新增统一标识规范化函数：去除首尾空格、转换大写；规范化前保留原始报文。</li>
+          <li>将 OCV DTO 的测量字段改为必填，并使用禁止 NaN/Infinity 的数字校验。</li>
+          <li>将 <code>testTime</code> 改为必填，并校验带时区的 ISO 8601。</li>
+          <li>为批量 DTO 增加 <code>@ArrayMaxSize(1000)</code>；超过上限的请求不写入。</li>
+          <li>执行基线检查并记录已有失败，不把与本期无关的失败混入 OCV 验收。</li>
+        </ul>
+        <pre><code>cd server
+npm run build
+npx jest --runInBand
+cd ..\web
+npm run build
+npm test -- --run</code></pre>
+      </article>
+
+      <article class="task">
+        <h3>Task 1：完成 TypeORM 数据库迁移 <span>正式变更入口只有 migration</span></h3>
+        <div class="files">Create: server/src/migrations/1781900000000-ExpandBatchNoAndOcvTraceFields.ts
+Modify: server/src/batch/batch.entity.ts
+Modify: server/src/batch/batch-status-log.entity.ts
+Modify: all manual process record entities
+Modify: server/src/cells/cell-barcode.entity.ts
+Modify: server/src/processes/ocv/ocv1-record.entity.ts
+Modify: server/src/processes/ocv/ocv2-record.entity.ts
+Modify: server/src/packs/pack.entity.ts
+Modify: server/src/packs/pack-cell.entity.ts
+Test: server/src/migrations/1781900000000-ExpandBatchNoAndOcvTraceFields.spec.ts</div>
+        <ul class="checklist">
+          <li>迁移前查询所有目标表的列长度、行数、索引和大小写冲突。</li>
+          <li>发现大写转换会造成唯一键冲突时，立即抛错并输出冲突条码，不能自动合并。</li>
+          <li>将所有相关 <code>batch_no</code> 扩展到 <code>NVARCHAR(32)</code>；<code>pack.batch_no</code> 保持已有 64 位兼容范围。</li>
+          <li>把现有批次号、电芯码、Pack 码统一转换为大写；冲突检查在更新前完成。</li>
+          <li>为 OCV 表增加 <code>barcode</code>、<code>voltage</code>、<code>internal_resistance</code>、<code>test_time</code>、<code>source_event_id</code>、<code>payload_hash</code>、<code>raw_payload</code>、<code>received_at</code>。</li>
+          <li>只在 OCV2 表增加 <code>k_value</code>；在 <code>cell_barcode</code> 增加 <code>ocv2_k_value</code>。</li>
+          <li>保留旧 OCV 字段和旧数据；没有电芯码的旧记录保持 NULL，不伪造回填。</li>
+          <li>增加过滤唯一索引：每张 OCV 表的非空 <code>source_event_id</code> 唯一；增加条码、批次和时间查询索引。</li>
+          <li><code>down</code> 不删除历史记录、不自动缩短 32 位字段；生产回滚采用前向修复，不使用破坏性回滚。</li>
+        </ul>
+        <pre><code>-- SQL Server max_length 以字节计，NVARCHAR(32) 对应 max_length = 64
+SELECT OBJECT_NAME(c.object_id) AS tableName,
+       c.name AS columnName,
+       c.max_length
+FROM sys.columns c
+WHERE c.name IN ('batch_no', 'barcode', 'pack_barcode');</code></pre>
+        <p>实际 migration 使用固定表名和参数化 SQL，不根据外部输入拼接 SQL。迁移必须在空库、已有库、重复执行和有旧 OCV 记录的测试库中验证。</p>
+      </article>
+
+      <article class="task">
+        <h3>Task 2：实现 OCV 写入服务和幂等处理 <span>单条与批量共用一套业务规则</span></h3>
+        <div class="files">Create: server/src/processes/ocv/ocv-ingestion.service.ts
+Create: server/src/processes/ocv/ocv-ingestion.service.spec.ts
+Modify: server/src/processes/ocv/ocv1-record.entity.ts
+Modify: server/src/processes/ocv/ocv2-record.entity.ts
+Modify: server/src/cells/cell-barcode.service.ts
+Modify: server/src/cells/cell-barcode.controller.ts
+Modify: server/src/cells/cell-barcode.module.ts
+Modify: server/src/common/filters/http-exception.filter.ts
+Modify: server/src/common/interceptors/sorter-api-log.interceptor.ts</div>
+        <ul class="checklist">
+          <li>控制器保持现有路径，统一委托给 <code>OcvIngestionService</code>。</li>
+          <li>单条请求作为一个记录处理；批量请求先逐条规范化和校验，再将有效记录写入。</li>
+          <li>批量中的无效记录不影响其他有效记录；数据库系统错误仍按事务失败处理并返回服务错误。</li>
+          <li>不得使用按条码覆盖的 <code>Map</code> 去重；没有 <code>eventId</code> 时，每条输入都要有自己的审计行。</li>
+          <li>批次不存在、字段缺失、数值异常、旧测试时间、跨批次条码和事件冲突都生成明确错误码。</li>
+          <li>已有电芯使用行锁或等价的并发控制，避免两个请求同时创建或更新同一条码。</li>
+          <li>新电芯只初始化批次号、条码和本次 OCV 快照，不清空分选、电芯容量、等级等其他字段。</li>
+          <li>OCV2 K 值写入 <code>ocv2_k_value</code>，不覆盖分选最终 <code>k_value</code>。</li>
+          <li>历史行和快照在同一事务内提交，提交成功后再失效追溯缓存。</li>
+          <li>接口日志记录原始记录、规范化结果、处理状态、错误码、接收时间和来源信息。</li>
+        </ul>
+        <pre><code>type OcvUploadResult = {
+  accepted: CellBarcode[];
+  duplicate: number;
+  rejected: OcvRejectedItem[];
+};
+
+type OcvRejectedItem = {
+  index: number;
+  barcode: string | null;
+  code: string;
+  message: string;
+};</code></pre>
+        <p>由于本期规定“部分失败返回 HTTP 400 但保留已保存数据”，需要同步修改异常过滤器，使结构化异常中的 <code>accepted</code>、<code>rejected</code> 和 <code>meta</code> 不被丢弃。</p>
+      </article>
+
+      <article class="task">
+        <h3>Task 3：修复 OCV 追溯和批次聚合 <span>普通追溯只读当前快照</span></h3>
+        <div class="files">Create: server/src/processes/ocv/ocv-audit.controller.ts
+Create: server/src/processes/ocv/ocv-audit.service.ts
+Create: server/src/processes/ocv/ocv-audit.service.spec.ts
+Modify: server/src/cells/cell-barcode.service.ts
+Modify: server/src/processes/process-status/process-status.service.ts
+Modify: server/src/processes/process-status/process-status.controller.ts
+Modify: server/src/processes/process-status/process-status.module.ts</div>
+        <ul class="checklist">
+          <li><code>GET /api/cells/:barcode/trace</code> 只读取当前电芯快照，不返回 OCV 历史数组。</li>
+          <li><code>GET /api/admin/ocv/records</code> 提供管理员分页查询，可按条码、批次、OCV 类型、时间范围和事件号过滤。</li>
+          <li>审计查询必须分页，默认页大小固定，不能一次返回一个批次的全部原始报文。</li>
+          <li><code>GET /api/processes/records/:batchNo</code> 对 OCV 取当前批次最新有效记录，排序使用 <code>test_time</code>、<code>received_at</code>、<code>id</code>，不再依赖多行 <code>WITHOUT_ARRAY_WRAPPER</code>。</li>
+          <li>旧的无条码 OCV 记录可让批次显示“已收到”，但不计入具体电芯数量。</li>
+          <li><code>GET /api/cells/batch/:batchNo/barcodes</code> 增加当前 OCV1/OCV2 快照标记和已测电芯数量所需字段。</li>
+          <li>OCV 上传成功后失效电芯追溯、批次电芯列表和相关批次记录缓存。</li>
+          <li>跨实例部署使用 Redis 作为生产缓存；没有 Redis 时只允许单实例运行或接受短暂缓存延迟。</li>
+        </ul>
+        <pre><code>-- 批次页统计的是当前有快照的电芯，不是历史测量次数
+SELECT
+  COUNT(*) AS cellCount,
+  SUM(CASE WHEN ocv1_time IS NOT NULL THEN 1 ELSE 0 END) AS ocv1Count,
+  SUM(CASE WHEN ocv2_time IS NOT NULL THEN 1 ELSE 0 END) AS ocv2Count
+FROM cell_barcode
+WHERE batch_no = @0;</code></pre>
+      </article>
+
+      <article class="task">
+        <h3>Task 4：统一工序展示和前端类型 <span>OCV 只读，不增加流程闸门</span></h3>
+        <div class="files">Create: server/src/processes/process-status/process-catalog.ts
+Modify: server/src/processes/process-status/process-status.service.ts
+Modify: server/src/seed/seed.service.ts
+Modify: server/src/master-data/process-dictionary/process-dictionary.service.ts
+Modify: web/src/api/cells.ts
+Modify: web/src/api/batch.ts
+Modify: web/src/api/process-dictionary.ts
+Modify: web/src/views/cells/CellTracePage.vue
+Modify: web/src/views/batch/BatchDetailPage.vue
+Modify: web/src/views/processes/ProcessHubPage.vue</div>
+        <ul class="checklist">
+          <li>后端流程目录统一使用 <code>grading → ocv1 → ocv2 → sorting</code>。</li>
+          <li>OCV 流程项标记为外部输入、只读、无草稿、无质检要求。</li>
+          <li>OCV 状态按批次内至少一个当前电芯快照判断“已收到”；不要求全部电芯完成。</li>
+          <li>流程字典使用幂等 upsert，不能因为数据库已经有其他字典数据就跳过 OCV 项。</li>
+          <li>前端电芯追溯显示当前 OCV1/OCV2 值、测试时间和设备编号；不显示审计历史数组。</li>
+          <li>批次页显示“已测电芯数 / 批次电芯总数”，不把审计行数误认为电芯数。</li>
+          <li>前端 API 类型替换关键路径上的 <code>Record&lt;string, any&gt;</code>。</li>
+        </ul>
+      </article>
+
+      <article class="task">
+        <h3>Task 5：测试、接口文档和上线验证 <span>以数据不丢失为验收主线</span></h3>
+        <div class="files">Test: server/src/processes/ocv/ocv-ingestion.service.spec.ts
+Test: server/src/processes/ocv/ocv-audit.service.spec.ts
+Test: server/src/cells/cell-barcode.controller.spec.ts
+Test: server/src/migrations/1781900000000-ExpandBatchNoAndOcvTraceFields.spec.ts
+Test: web/src/views/cells/CellTracePage.spec.ts
+Modify: doc/YT-MES-硬件设备接口文档-v3.0.html
+Modify: maintained OCV and batchNo interface documents</div>
+        <ul class="checklist">
+          <li>验证 32 位批次号通过所有相关 DTO、数据库列和追溯接口；33 位请求被拒绝。</li>
+          <li>验证缺失批次不会写入任何 OCV 或电芯数据。</li>
+          <li>验证新电芯可创建，同批次重复上传不会覆盖其他工序字段。</li>
+          <li>验证跨批次条码返回冲突，原批次关系保持不变。</li>
+          <li>验证 OCV1/OCV2 必填字段、单位、时间格式、异常数值和批量上限。</li>
+          <li>验证较早测试时间不写历史、不改快照；相同测试时间后接收值成为当前值。</li>
+          <li>验证无 <code>eventId</code> 的重复上传每次新增历史；有相同 ID 的相同内容只处理一次；不同内容返回 409。</li>
+          <li>验证批量部分失败时有效记录已经保存，HTTP 400 响应包含完整失败明细。</li>
+          <li>验证旧的 NULL 条码 OCV 记录可读、不崩溃、不被错误关联到电芯。</li>
+          <li>验证普通电芯追溯只返回快照，管理员审计接口支持分页和权限控制。</li>
+          <li>使用真实 SQL Server 验证 migration、索引、锁竞争和大小写冲突；单元测试不能代替数据库集成测试。</li>
+        </ul>
+      </article>
+
+      <article class="task">
+        <h3>Task 6：分阶段发布</h3>
+        <div class="files">Create: docs/superpowers/plans/2026-08-05-ocv-traceability-rollout-checklist.md</div>
+        <ol>
+          <li>备份数据库并记录所有目标表的行数、最大批次号长度、大小写冲突、旧 OCV NULL 条码行数和当前快照数量。</li>
+          <li>在预生产 SQL Server 执行 TypeORM migration，确认列元数据、索引和历史行数未异常变化。</li>
+          <li>先发布数据库结构，再发布 API；新字段保持兼容，使旧客户端在滚动发布期间仍能写入。</li>
+          <li>使用一批包含 32 位批次号、有效数据、缺失数据、迟到数据、重复事件和跨批次条码的测试报文进行验收。</li>
+          <li>确认设备在 HTTP 400 时只重试失败记录；如果设备不能按失败明细重试，不得直接上线部分成功模式。</li>
+          <li>检查 OCV 接口日志、审计记录、当前快照、批次统计和电芯追溯结果相互一致。</li>
+          <li>生产环境保持网络隔离，并设置请求体大小、连接超时和处理超时；批量业务上限为 1000 条。</li>
+        </ol>
+      </article>
+    </section>
+
+    <section class="section">
+      <h2>7. 关键错误码</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>错误码</th><th>场景</th><th>是否写入</th></tr></thead>
+          <tbody>
+            <tr><td><code>BATCH_NOT_FOUND</code></td><td>批次不存在。</td><td>该记录不写入。</td></tr>
+            <tr><td><code>OCV_VALIDATION_ERROR</code></td><td>字段缺失、时间格式错误、数值非法或超过批量上限。</td><td>该记录不写入。</td></tr>
+            <tr><td><code>CELL_BATCH_CONFLICT</code></td><td>电芯已属于其他批次。</td><td>原数据不变。</td></tr>
+            <tr><td><code>OCV_STALE_TEST_TIME</code></td><td>设备测试时间早于当前快照。</td><td>历史和快照都不写入。</td></tr>
+            <tr><td><code>OCV_EVENT_CONFLICT</code></td><td>相同事件号对应不同测量内容。</td><td>原事件不变。</td></tr>
+            <tr><td><code>OCV_PARTIAL_FAILURE</code></td><td>批量中部分记录无效。</td><td>有效记录保存，失败记录不保存。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>8. 验收清单</h2>
+      <ul class="checklist">
+        <li>OCV1、OCV2 单条和批量路径保持不变，旧设备客户端可以继续解析成功响应。</li>
+        <li>批次号、电芯码、Pack 码新旧数据均按大写规则处理；历史大小写冲突不会被自动覆盖。</li>
+        <li>批次号从数据库到 DTO、查询参数、前端类型和接口文档全链路支持 32 个字符。</li>
+        <li>OCV1 电压/内阻和 OCV2 电压/内阻/K 值缺失时拒绝记录。</li>
+        <li>无效数值不会被夹紧、截断或替换为默认值。</li>
+        <li>当前快照只接受时间不早于当前值的测量；相同时间以后接收的值可更新当前快照。</li>
+        <li>每条有效上传都能通过条码、批次和 OCV 类型追溯到审计记录。</li>
+        <li>无事件号的重复上传不丢数据；有事件号的重试不会产生重复记录。</li>
+        <li>批量部分失败时有效记录可查、失败原因可查、设备可按失败明细重试。</li>
+        <li>普通追溯展示当前值，管理员审计查询展示历史；两者职责不混淆。</li>
+        <li>OCV 流程顺序统一为分容、OCV1、OCV2、分选，且不阻断任何上传。</li>
+        <li>旧 OCV 行没有条码时不会导致批次查询 JSON 解析失败，也不会错误归属到某个电芯。</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>9. 后续治理事项</h2>
+      <div class="callout info">
+        下列规则已经在需求确认中确定，但不放入本次 OCV 接口交付，避免影响本次上线周期。
+      </div>
+      <ul>
+        <li>Pack 关联：保存未知电芯的待解析关系；同一时间一个电芯只能属于一个有效 Pack；释放旧关联需要操作人和原因；重组保留历史。</li>
+        <li>分选接口：已有电芯跨批次上传时采用与 OCV 相同的拒绝规则；异常数值由夹紧改为拒绝并保留失败原因。</li>
+        <li>人工工序：如果未来要求查询完整历史，再单独设计人工工序事件表，不把现有批次当前记录直接当历史表。</li>
+        <li>公共接口安全：网络隔离稳定后再评估 API Key、签名校验和设备级权限。</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>10. 推荐提交顺序</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>顺序</th><th>提交信息</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>test: add ocv contract and batch length cases</code></td><td>基线、DTO、共享常量和失败场景测试。</td></tr>
+            <tr><td>2</td><td><code>feat: expand batch fields and ocv audit columns</code></td><td>TypeORM migration、实体字段、索引和大小写迁移。</td></tr>
+            <tr><td>3</td><td><code>feat: persist ocv snapshots and audit records</code></td><td>OCV 事务写入、快照、eventId、部分成功。</td></tr>
+            <tr><td>4</td><td><code>feat: expose current ocv trace and admin audit</code></td><td>电芯追溯、批次统计、管理员审计查询、缓存失效。</td></tr>
+            <tr><td>5</td><td><code>feat: display external ocv processes</code></td><td>流程目录、只读卡片、批次和电芯页面。</td></tr>
+            <tr><td>6</td><td><code>docs: update ocv interface and rollout contract</code></td><td>接口文档、部署清单和验收记录。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="footer">
+      文档文件：<code>docs/superpowers/plans/2026-08-05-ocv-traceability-optimization-plan.html</code><br>
+      本文档基于已确认的 OCV 上传、快照、审计、批次、批量和追溯规则编制。实施前先完成 Task 0 和 Task 1 的真实数据库基线验证。
+    </div>
+  </main>
+</body>
+</html>

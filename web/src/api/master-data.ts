@@ -31,4 +31,7 @@ export const masterDataApi = {
   operators() {
     return get<OperatorOption[]>('/users/operators')
   },
+  qualityPersonnel() {
+    return get<OperatorOption[]>('/users/quality-personnel')
+  },
 }

@@ -69,16 +69,6 @@ export class CoatingService {
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
 
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo,
-        processType: 'coating',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
-
     return saved;
   }
 

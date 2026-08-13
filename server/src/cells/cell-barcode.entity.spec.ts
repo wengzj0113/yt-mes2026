@@ -15,10 +15,10 @@ describe('CellBarcode Entity', () => {
     const record = new CellBarcode();
     record.voltage = 3.9540;
     record.internalResistance = 21.50;
-    record.capacity = 2050.00;
+    record.capacity = '2600-2650';
     expect(record.voltage).toBe(3.9540);
     expect(record.internalResistance).toBe(21.50);
-    expect(record.capacity).toBe(2050.00);
+    expect(record.capacity).toBe('2600-2650');
   });
 
   it('should support grade field', () => {

@@ -32,8 +32,11 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SystemModule } from './system/system.module';
 import { PackModule } from './packs/pack.module';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { RolesGuard } from './auth/roles.guard';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
+import { ProcessParameterModule } from './process-parameters/process-parameter.module';
 
 @Module({
   imports: [
@@ -70,7 +73,9 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
         username: config.get<string>('DB_USERNAME', 'sa'),
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_DATABASE', 'YT_MES'),
-        synchronize: config.get<string>('NODE_ENV') === 'development',
+        synchronize: false,
+        migrationsRun: true,
+        migrations: [__dirname + '/migrations/*.{js,ts}'],
         autoLoadEntities: true,
         namingStrategy: new SnakeNamingStrategy(),
         options: {
@@ -115,11 +120,20 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     DashboardModule,
     SystemModule,
     PackModule,
+    ProcessParameterModule,
   ],
   providers: [
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditLogInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })

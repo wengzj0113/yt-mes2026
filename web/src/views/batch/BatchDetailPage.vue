@@ -10,7 +10,7 @@
         <el-descriptions-item label="产品型号">{{ batch.productModel }}</el-descriptions-item>
         <el-descriptions-item label="产品规格">{{ batch.productSpec }}</el-descriptions-item>
         <el-descriptions-item label="计划数量">{{ batch.plannedQty }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ batch.createdAt }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatDateTime(batch.createdAt) }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
 
@@ -89,11 +89,12 @@
       :title="drawerTitle"
       size="600px"
       destroy-on-close
+      @closed="closeDrawer"
     >
       <component
         :is="currentComponent"
         :batchNo="batch?.batchNo"
-        @close="closeDrawer"
+        @close="drawerVisible = false"
       />
     </el-drawer>
   </div>
@@ -105,6 +106,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { batchApi, type ProcessStatusItem } from '@/api/batch'
 import { cellApi, type CellBarcodeRecord } from '@/api/cells'
 import { statusLogApi, type BatchStatusLogItem } from '@/api/status-log'
+import { formatDateTime } from '@/composables/datetime'
 import type { BatchDto } from '@/types/api'
 
 // Import components for drawer
@@ -120,6 +122,8 @@ import InjectionPage from '../processes/InjectionPage.vue'
 import WrappingPage from '../processes/WrappingPage.vue'
 import FormationPage from '../processes/FormationPage.vue'
 import GradingPage from '../processes/GradingPage.vue'
+import Ocv1Page from '../processes/Ocv1Page.vue'
+import Ocv2Page from '../processes/Ocv2Page.vue'
 import SortingPage from '../processes/SortingPage.vue'
 import QualityCheckPage from '../quality/QualityCheckPage.vue'
 import MaterialWarehousePage from '../material/MaterialWarehousePage.vue'
@@ -149,6 +153,8 @@ const componentMap: Record<string, any> = {
   'wrapping': WrappingPage,
   'formation': FormationPage,
   'grading': GradingPage,
+  'ocv1': Ocv1Page,
+  'ocv2': Ocv2Page,
   'sorting': SortingPage,
   'quality': QualityCheckPage,
   'materials': MaterialWarehousePage
@@ -162,15 +168,33 @@ const pageSize = 20
 const cellTotal = ref(0)
 
 function statusTag(status: string): string {
-  return { not_entered: 'info', draft: 'warning', submitted: 'success', voided: 'danger' }[status] || 'info'
+  const map: Record<string, string> = {
+    not_entered: 'info',
+    saved: 'success',
+    draft: 'success',
+    pending_quality: 'primary',
+    quality_passed: 'success',
+    quality_failed: 'danger',
+    voided: 'danger'
+  };
+  return map[status] || 'info';
 }
 
 function statusText(status: string): string {
-  return { not_entered: '待录入', draft: '录入完成', submitted: '已提交', voided: '已作废' }[status] || status
+  const map: Record<string, string> = {
+    not_entered: '待录入',
+    saved: '已保存',
+    draft: '已保存',
+    pending_quality: '待质检',
+    quality_passed: '已完成',
+    quality_failed: '质检不合格',
+    voided: '已作废'
+  };
+  return map[status] || status;
 }
 
-function formatTime(iso: string): string {
-  return iso ? iso.slice(0, 16).replace('T', ' ') : ''
+function formatTime(dateStr: string): string {
+  return formatDateTime(dateStr)
 }
 
 function navigate(path: string, name?: string) {

@@ -5,7 +5,7 @@ export interface ProcessStatusItem {
   processKey: string
   processName: string
   route: string
-  status: 'not_entered' | 'draft' | 'submitted' | 'voided'
+  status: 'not_entered' | 'saved' | 'draft' | 'submitted' | 'pending_quality' | 'quality_passed' | 'quality_failed' | 'voided'
   isDraft: boolean | null
   recordStatus: number | null
   updatedAt: string | null
@@ -13,7 +13,7 @@ export interface ProcessStatusItem {
 
 export const batchApi = {
   list(params?: { page?: number; pageSize?: number; keyword?: string; status?: string }) {
-    return get<{ items: BatchDto[]; meta: { page: number; pageSize: number; total: number; totalPages: number } }>('/batches', params)
+    return get<{ items: BatchDto[] }>('/batches', params)
   },
   generateNo(mnRatio?: string) {
     return get<{ batchNo: string }>('/batches/generate-no', mnRatio ? { mnRatio } : undefined)

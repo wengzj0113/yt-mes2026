@@ -74,6 +74,9 @@ export interface EquipmentDto {
 export interface RoleDto {
   code: number
   name: string
+  description: string | null
+  isSystem: boolean
+  createdAt: string | null
 }
 
 export interface LogDto {

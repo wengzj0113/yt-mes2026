@@ -15,6 +15,8 @@ import { BatchQueryDto } from './dto/query-batch.dto';
 import { GenerateBatchNoDto } from './dto/generate-batch-no.dto';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../user/user.entity';
 
 @Controller('batches')
 export class BatchController {
@@ -66,6 +68,7 @@ export class BatchController {
   }
 
   @Delete(':batchNo')
+  @Roles(UserRole.ADMIN)
   async remove(@Param('batchNo') batchNo: string) {
     await this.batchService.remove(batchNo);
     return { message: '删除成功' };

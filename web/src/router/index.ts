@@ -1,6 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { ElMessage } from 'element-plus'
 import AppLayout from '@/views/layout/AppLayout.vue'
+
+// 角色常量（与后端 UserRole 保持一致）
+export const UserRole = {
+  OPERATOR: 1,
+  QUALITY: 2,
+  WAREHOUSE: 3,
+  ADMIN: 4,
+} as const
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,13 +21,19 @@ const router = createRouter({
       meta: { public: true },
     },
     {
-    path: '/big-screen',
-    name: 'BigScreen',
-    component: () => import('@/views/dashboard/BigScreenPage.vue'),
-    meta: { title: '大屏看板' }
-  },
-  {
-    path: '/',
+      path: '/register',
+      name: 'Register',
+      component: () => import('@/views/login/RegisterPage.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/big-screen',
+      name: 'BigScreen',
+      component: () => import('@/views/dashboard/BigScreenPage.vue'),
+      meta: { title: '大屏看板' },
+    },
+    {
+      path: '/',
       component: AppLayout,
       redirect: '/dashboard',
       children: [
@@ -39,19 +54,23 @@ const router = createRouter({
         { path: 'processes/:batchNo/wrapping', name: 'Wrapping', component: () => import('@/views/processes/WrappingPage.vue') },
         { path: 'processes/:batchNo/formation', name: 'Formation', component: () => import('@/views/processes/FormationPage.vue') },
         { path: 'processes/:batchNo/grading', name: 'Grading', component: () => import('@/views/processes/GradingPage.vue') },
+        { path: 'processes/:batchNo/ocv1', name: 'Ocv1', component: () => import('@/views/processes/Ocv1Page.vue') },
+        { path: 'processes/:batchNo/ocv2', name: 'Ocv2', component: () => import('@/views/processes/Ocv2Page.vue') },
         { path: 'quality/:batchNo', name: 'QualityCheck', component: () => import('@/views/quality/QualityCheckPage.vue') },
+        { path: 'quality', name: 'QualityManage', component: () => import('@/views/quality/QualityManagePage.vue'), meta: { title: '质检管理' } },
         { path: 'materials/:batchNo', name: 'MaterialWarehouse', component: () => import('@/views/material/MaterialWarehousePage.vue') },
         { path: 'trace', name: 'CellTrace', component: () => import('@/views/cells/CellTracePage.vue') },
         { path: 'pack-entry', name: 'PackEntry', component: () => import('@/views/packs/PackEntryPage.vue') },
 
-        // System Management
-        { path: 'system/processes', name: 'ProcessDictionary', component: () => import('@/views/master-data/ProcessDictionaryPage.vue') },
-        { path: 'system/users', name: 'UserList', component: () => import('@/views/system/UserListPage.vue') },
-        { path: 'system/roles', name: 'RoleList', component: () => import('@/views/system/RoleListPage.vue') },
-        { path: 'system/departments', name: 'DepartmentList', component: () => import('@/views/system/DepartmentListPage.vue') },
-        { path: 'system/equipment', name: 'EquipmentList', component: () => import('@/views/system/EquipmentListPage.vue') },
-        { path: 'system/logs', name: 'LogList', component: () => import('@/views/system/LogListPage.vue') },
-        { path: 'system/settings', name: 'SystemSettings', component: () => import('@/views/system/SystemSettingsPage.vue') },
+        // System Management (requires ADMIN)
+        { path: 'system/processes', name: 'ProcessDictionary', component: () => import('@/views/master-data/ProcessDictionaryPage.vue'), meta: { roles: [UserRole.ADMIN] } },
+        { path: 'system/users', name: 'UserList', component: () => import('@/views/system/UserListPage.vue'), meta: { roles: [UserRole.ADMIN] } },
+        { path: 'system/roles', name: 'RoleList', component: () => import('@/views/system/RoleListPage.vue'), meta: { roles: [UserRole.ADMIN] } },
+        { path: 'system/departments', name: 'DepartmentList', component: () => import('@/views/system/DepartmentListPage.vue'), meta: { roles: [UserRole.ADMIN] } },
+        { path: 'system/equipment', name: 'EquipmentList', component: () => import('@/views/system/EquipmentListPage.vue'), meta: { roles: [UserRole.ADMIN] } },
+        { path: 'system/logs', name: 'LogList', component: () => import('@/views/system/LogListPage.vue'), meta: { roles: [UserRole.ADMIN] } },
+        { path: 'system/sorter-logs', name: 'SorterLogList', component: () => import('@/views/system/SorterLogListPage.vue'), meta: { roles: [UserRole.ADMIN] } },
+        { path: 'system/settings', name: 'SystemSettings', component: () => import('@/views/system/SystemSettingsPage.vue'), meta: { roles: [UserRole.ADMIN] } },
       ],
     },
   ],
@@ -59,7 +78,7 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
-  
+
   // 生产环境下，如果尝试在 8080 端口访问大屏，重定向到 8081
   if (to.name === 'BigScreen' && !import.meta.env.DEV && window.location.port !== '8081') {
     const protocol = window.location.protocol
@@ -68,10 +87,15 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  if (to.meta.public || auth.isLoggedIn) {
+  if (to.meta.public) {
     next()
-  } else {
+  } else if (!auth.isLoggedIn) {
     next('/login')
+  } else if (to.meta.roles && auth.user?.roleCode && !(to.meta.roles as number[]).includes(auth.user.roleCode)) {
+    ElMessage.warning('无权限访问该页面')
+    next('/dashboard')
+  } else {
+    next()
   }
 })
 

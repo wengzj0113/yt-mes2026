@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { QualityCheckService } from './quality-check.service';
 import { CreateQualityCheckDto } from './dto/create-quality-check.dto';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../user/user.entity';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 
 @Controller('batches/:batchNo/quality-checks')
@@ -8,6 +10,7 @@ export class QualityCheckController {
   constructor(private readonly qualityCheckService: QualityCheckService) {}
 
   @Post()
+  @Roles(UserRole.QUALITY, UserRole.ADMIN)
   async create(@Param('batchNo') batchNo: string, @Body() dto: CreateQualityCheckDto, @CurrentUser() user: JwtPayload) {
     dto.batchNo = batchNo;
     const record = await this.qualityCheckService.create(dto, user.sub);

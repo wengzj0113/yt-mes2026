@@ -96,7 +96,7 @@
         <el-table-column prop="operatorName" label="操作员" width="120" />
         <el-table-column prop="createdAt" label="录入时间" width="180">
           <template #default="{ row }">
-            {{ new Date(row.createdAt).toLocaleString() }}
+            {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="100" align="center">
@@ -127,6 +127,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { createOrUpdatePack, getPackList, type Pack } from '@/api/pack'
+import { formatDateTime } from '@/composables/datetime'
 
 const router = useRouter()
 const loading = ref(false)

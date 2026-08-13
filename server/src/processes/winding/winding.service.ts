@@ -53,9 +53,9 @@ export class WindingService {
   async submitQuality(dto: SubmitWindingQualityDto, userId: number): Promise<WindingRecord> {
     await this.validateBatch(dto.batchNo);
 
-    const record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
+    let record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (!record) {
-      throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到卷绕草稿记录' });
+      record = this.repo.create({ batchNo: dto.batchNo, createdBy: userId });
     }
     
     // Merge potential extra fields during quality submission as well
@@ -71,16 +71,6 @@ export class WindingService {
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
-
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo: dto.batchNo,
-        processType: 'winding',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
 
     return saved;
   }

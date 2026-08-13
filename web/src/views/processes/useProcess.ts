@@ -1,7 +1,7 @@
 export interface FormField {
   key: string
   label: string
-  type?: 'text' | 'number' | 'select'
+  type?: 'text' | 'number' | 'select' | 'range'
   required?: boolean
   options?: any // Can be string (comma separated) or array
   group?: string
@@ -9,9 +9,17 @@ export interface FormField {
   min?: number | null
   max?: number | null
   defaultValue?: any
+  // 仅当 type === 'range' 时使用
+  minKey?: string
+  maxKey?: string
+  minLabel?: string
+  maxLabel?: string
+  step?: number
+  precision?: number
+  helpText?: string
 }
 
-import { ref, reactive, watch, type Ref } from 'vue'
+import { ref, reactive, watch, isRef, type Ref } from 'vue'
 import { get, post } from '@/api'
 
 export function useProcessApi(modulePath: string) {
@@ -32,30 +40,40 @@ export function useProcessApi(modulePath: string) {
 
 export function useProcessForm(
   basePath: string,
-  draftFields: Ref<FormField[]>,
-  qualityFields: Ref<FormField[]>,
+  draftFields: Ref<FormField[]> | FormField[],
+  qualityFields: Ref<FormField[]> | FormField[],
 ) {
   const loading = ref(false)
   const saving = ref(false)
   const record = ref<any>(null)
   const error = ref('')
 
+  const draftFieldsRef = (isRef(draftFields) ? draftFields : ref(draftFields)) as Ref<FormField[]>
+  const qualityFieldsRef = (isRef(qualityFields) ? qualityFields : ref(qualityFields)) as Ref<FormField[]>
+
   const draftForm = reactive<Record<string, any>>({})
   const qualityForm = reactive<Record<string, any>>({})
 
   // Watch for field changes to initialize form
-  watch(draftFields, (newFields) => {
-    newFields.forEach((f) => {
+  watch(draftFieldsRef, (newFields) => {
+    ;(newFields || []).forEach((f) => {
+      if (!f) return
+      if (f.type === 'range' && f.minKey && f.maxKey) {
+        if (draftForm[f.minKey] === undefined) draftForm[f.minKey] = undefined
+        if (draftForm[f.maxKey] === undefined) draftForm[f.maxKey] = undefined
+        return
+      }
       if (draftForm[f.key] === undefined) {
         draftForm[f.key] = ''
       }
     })
   }, { immediate: true })
 
-  watch(qualityFields, (newFields) => {
-    newFields.forEach((f) => {
+  watch(qualityFieldsRef, (newFields) => {
+    ;(newFields || []).forEach((f) => {
+      if (!f) return
       if (qualityForm[f.key] === undefined) {
-        qualityForm[f.key] = ''
+        qualityForm[f.key] = f.type === 'number' ? undefined : ''
       }
     })
   }, { immediate: true })
@@ -76,11 +94,23 @@ export function useProcessForm(
           } catch (e) {}
         }
 
-        draftFields.value.forEach((f) => {
+        draftFieldsRef.value.forEach((f) => {
+          if (f.type === 'range' && f.minKey && f.maxKey) {
+            const minV = allData[f.minKey]
+            const maxV = allData[f.maxKey]
+            draftForm[f.minKey] = (minV === '' || minV == null) ? undefined : Number(minV)
+            draftForm[f.maxKey] = (maxV === '' || maxV == null) ? undefined : Number(maxV)
+            return
+          }
           draftForm[f.key] = allData[f.key] ?? ''
         })
-        qualityFields.value.forEach((f) => {
-          qualityForm[f.key] = allData[f.key] ?? ''
+        qualityFieldsRef.value.forEach((f) => {
+          const v = allData[f.key]
+          if (f.type === 'number') {
+            qualityForm[f.key] = (v === '' || v === null) ? undefined : v
+          } else {
+            qualityForm[f.key] = v ?? ''
+          }
         })
       }
     } catch (e: any) {
@@ -95,15 +125,13 @@ export function useProcessForm(
   async function saveDraft(batchNo: string) {
     saving.value = true
     try {
-      // Split hardcoded fields and extraData
-      // Note: We don't strictly know which are hardcoded in the backend here, 
-      // but we can send the whole form and let the backend handle it if we update the backend.
-      // Alternatively, we can pass hardcoded keys as a prop.
-      // For now, let's send the whole form and update the backend to be smart.
       const res = await api.createDraft(batchNo, draftForm)
       record.value = res.data
+      error.value = ''
+      return true
     } catch (e: any) {
       error.value = e?.response?.data?.message || '保存草稿失败'
+      return false
     } finally {
       saving.value = false
     }
@@ -112,10 +140,9 @@ export function useProcessForm(
   async function submit(batchNo: string) {
     saving.value = true
     try {
-      // First save draft to ensure extraData is updated if any
+      // 先保存草稿，确保 draft 实体字段入库（submit DTO 不含这些字段）
       await api.createDraft(batchNo, { ...draftForm, ...qualityForm })
-      
-      const res = await api.submitQuality(batchNo, qualityForm)
+      const res = await api.submitQuality(batchNo, { ...qualityForm, operatorName: draftForm.operatorName })
       record.value = res.data
       return true
     } catch (e: any) {

@@ -22,7 +22,7 @@ import { CellBarcode } from '../cells/cell-barcode.entity';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE || 'YT_MES',
       entities: [User, Department, Equipment, ProcessDictionary, SystemConfig, Batch, CellBarcode],
-      synchronize: true,
+      synchronize: process.env.SEED_ALLOW_SYNC === 'true',
       namingStrategy: new SnakeNamingStrategy(),
       options: { encrypt: false, trustServerCertificate: true },
     }),

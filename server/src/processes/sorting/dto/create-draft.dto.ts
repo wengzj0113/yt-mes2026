@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNumber, MaxLength, Min } from 'class-validator';
 
 export class CreateSortingDraftDto {
   @IsString()
@@ -9,17 +9,35 @@ export class CreateSortingDraftDto {
   @MaxLength(32)
   equipmentCode: string;
 
-  @IsString()
-  @MaxLength(64)
-  ocvVoltageRange: string;
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  ocvVoltageMin?: number | null;
 
-  @IsString()
-  @MaxLength(64)
-  irRange: string;
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  ocvVoltageMax?: number | null;
 
-  @IsString()
-  @MaxLength(64)
-  capacityRange: string;
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  irMin?: number | null;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  irMax?: number | null;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  capacityMin?: number | null;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  capacityMax?: number | null;
 
   @IsString()
   @MaxLength(32)

@@ -112,7 +112,7 @@ describe('ElectrodeService', () => {
   describe('submitQuality', () => {
     const qualityDto = {
       batchNo: 'WT26A01MA',
-      tabWeldingPull: '50N',
+      tabWeldingPull: 50,
     };
 
     it('should submit draft with quality fields', async () => {
@@ -123,7 +123,7 @@ describe('ElectrodeService', () => {
 
       const result = await service.submitQuality(qualityDto, 2);
       expect(result.isDraft).toBe(false);
-      expect(result.tabWeldingPull).toBe('50N');
+      expect(result.tabWeldingPull).toBe(50);
     });
 
     it('should reject when no draft exists', async () => {

@@ -19,6 +19,30 @@ export class ProcessDictionaryService implements OnModuleInit {
     const processes = await this.processDictRepo.find();
     if (processes.length === 0) return;
 
+    const requiredOcvProcesses = [
+      { processCode: 'ocv1', processName: 'OCV1测试', sortOrder: 125, isActive: true },
+      { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 128, isActive: true },
+    ];
+    for (const definition of requiredOcvProcesses) {
+      const existing = processes.find(process => process.processCode === definition.processCode);
+      if (!existing) {
+        const process = this.processDictRepo.create(definition);
+        await this.processDictRepo.save(process);
+        processes.push(process);
+      } else if (existing.sortOrder !== definition.sortOrder) {
+        existing.sortOrder = definition.sortOrder;
+        await this.processDictRepo.save(existing);
+      }
+    }
+
+    const sortingFields = [
+      { group: '基础信息', key: 'equipmentCode', label: '设备编号', type: 'text', required: true, isSystem: true },
+      { group: '工艺参数', key: 'ocvVoltageRange', label: 'OCV电压范围', unit: 'V', type: 'range', minKey: 'ocvVoltageMin', maxKey: 'ocvVoltageMax', required: true, isSystem: true },
+      { group: '工艺参数', key: 'irRange', label: '内阻范围', unit: 'mΩ', type: 'range', minKey: 'irMin', maxKey: 'irMax', required: true, isSystem: true },
+      { group: '工艺参数', key: 'capacityRange', label: '容量范围', unit: 'Ah', type: 'range', minKey: 'capacityMin', maxKey: 'capacityMax', required: true, isSystem: true },
+      { group: '操作信息', key: 'operatorName', label: '操作员', type: 'text', required: true, isSystem: true },
+    ];
+
     const standardFields: Record<string, any[]> = {
       batching: [
         { group: '物料信息', key: 'positiveMaterial', label: '正极材料', type: 'text', required: true, isSystem: true },
@@ -68,9 +92,9 @@ export class ProcessDictionaryService implements OnModuleInit {
       assembly: [
         { group: '基础信息', key: 'casingEquipmentCode', label: '入壳设备编号', type: 'text', required: true, isSystem: true },
         { group: '物料信息', key: 'shellModel', label: '壳体型号', type: 'text', required: true, isSystem: true },
-        { group: '工艺参数', key: 'bottomWeldPull', label: '底焊拉力', unit: 'N', type: 'number', required: false, isSystem: true },
-        { group: '工艺参数', key: 'capWeldingPull', label: '盖帽焊接拉力', unit: 'N', type: 'number', required: false, isSystem: true },
-        { group: '工艺参数', key: 'tabWeldingPull', label: '极耳焊接拉力', unit: 'N', type: 'number', required: false, isSystem: true },
+        { group: '基础信息', key: 'bottomWeldEquipment', label: '底焊设备编号', type: 'text', required: true, isSystem: true },
+        { group: '工艺参数', key: 'bottomWeldParams', label: '底焊参数', type: 'text', required: true, isSystem: true },
+        { group: '物料信息', key: 'capModel', label: '盖板型号', type: 'text', required: true, isSystem: true },
         { group: '操作信息', key: 'operatorName', label: '操作员', type: 'text', required: true, isSystem: true },
       ],
       baking: [
@@ -101,13 +125,9 @@ export class ProcessDictionaryService implements OnModuleInit {
         { group: '质量标准', key: 'capacityGradeStandard', label: '容量分级标准', type: 'text', required: false, isSystem: true },
         { group: '操作信息', key: 'operatorName', label: '操作员', type: 'text', required: true, isSystem: true },
       ],
-      sorting: [
-        { group: '基础信息', key: 'equipmentCode', label: '设备编号', type: 'text', required: true, isSystem: true },
-        { group: '工艺参数', key: 'ocvVoltageRange', label: 'OCV电压范围', unit: 'V', type: 'text', required: true, isSystem: true },
-        { group: '工艺参数', key: 'irRange', label: '内阻范围', unit: 'mΩ', type: 'text', required: true, isSystem: true },
-        { group: '工艺参数', key: 'capacityRange', label: '容量范围', unit: 'Ah', type: 'text', required: true, isSystem: true },
-        { group: '操作信息', key: 'operatorName', label: '操作员', type: 'text', required: true, isSystem: true },
-      ],
+      sorting: sortingFields,
+      ocv1: sortingFields.map(field => ({ ...field })),
+      ocv2: sortingFields.map(field => ({ ...field })),
       wrapping: [
         { group: '基础信息', key: 'equipmentCode', label: '设备编号', type: 'text', required: true, isSystem: true },
         { group: '物料信息', key: 'filmModel', label: '包膜型号', type: 'text', required: true, isSystem: true },
@@ -117,7 +137,6 @@ export class ProcessDictionaryService implements OnModuleInit {
     };
 
     for (const process of processes) {
-      // 只有当 fieldDefinitions 为空或者不包含任何系统字段时才进行初始化
       let currentFields: any[] = [];
       try {
         currentFields = process.fieldDefinitions ? JSON.parse(process.fieldDefinitions) : [];
@@ -125,12 +144,15 @@ export class ProcessDictionaryService implements OnModuleInit {
         currentFields = [];
       }
 
-      const hasSystemFields = currentFields.some(f => f.isSystem);
-      if (!hasSystemFields && standardFields[process.processCode]) {
-        // 合并：保留现有的自定义字段（如果有的话），加上预设的系统字段
-        const newFields = [...standardFields[process.processCode], ...currentFields.filter(f => !standardFields[process.processCode].find(sf => sf.key === f.key))];
-        process.fieldDefinitions = JSON.stringify(newFields);
-        await this.processDictRepo.save(process);
+      if (standardFields[process.processCode]) {
+        const shouldInitFields = !process.fieldDefinitions || currentFields.length === 0;
+        if (shouldInitFields) {
+          const newFieldsStr = JSON.stringify(standardFields[process.processCode]);
+          if (process.fieldDefinitions !== newFieldsStr) {
+            process.fieldDefinitions = newFieldsStr;
+            await this.processDictRepo.save(process);
+          }
+        }
       }
     }
   }

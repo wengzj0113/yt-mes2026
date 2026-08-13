@@ -110,6 +110,7 @@ import { useRouter } from 'vue-router'
 import { batchApi } from '@/api/batch'
 import { systemApi } from '@/api/system'
 import { qualityApi } from '@/api/quality'
+import { formatDateTime } from '@/composables/datetime'
 import type { BatchDto, LogDto } from '@/types/api'
 import { 
   Monitor, Bell, Compass, Box, TrendCharts, 
@@ -289,11 +290,10 @@ const trendOption = computed(() => ({
 // Helpers
 function formatDate(dateStr: string, format: string) {
   if (!dateStr) return '-'
-  const d = new Date(dateStr)
   if (format === 'HH:mm:ss') {
-    return d.toLocaleTimeString()
+    return formatDateTime(dateStr, { withSeconds: true }).slice(11)
   }
-  return d.toLocaleString()
+  return formatDateTime(dateStr, { withSeconds: true })
 }
 
 function getStatusType(status: number) {
@@ -337,10 +337,6 @@ async function fetchData() {
     ])
     statsData.value = stats.data
     alertLogs.value = logs.data.items.filter((l: any) => l.action.includes('错误') || l.action.includes('异常') || l.action.includes('失败'))
-    // If no real alerts, show some regular logs to fill the space
-    if (alertLogs.value.length < 3) {
-      alertLogs.value = logs.data.items.slice(0, 5)
-    }
     recentBatches.value = batches.data.items
     qualityTrends.value = trends.data
     lastUpdateTime.value = new Date().toLocaleTimeString()
@@ -418,6 +414,16 @@ onBeforeUnmount(() => {
 .dashboard-card {
   height: 100%;
   border: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px;
 }
 
 .card-header {
@@ -433,11 +439,11 @@ onBeforeUnmount(() => {
 
 /* Alerts */
 .alerts-card {
-  height: 400px;
+  height: 360px;
 }
 
 .alert-list {
-  height: 320px;
+  flex: 1;
   overflow-y: auto;
 }
 
@@ -472,7 +478,7 @@ onBeforeUnmount(() => {
 
 /* Hub */
 .hub-card {
-  height: 400px;
+  height: 360px;
 }
 
 .hub-content {
@@ -480,17 +486,17 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 320px;
+  height: 280px;
 }
 
 .gauge-chart {
-  height: 280px;
+  height: 230px;
   width: 100%;
 }
 
 .hub-info {
   text-align: center;
-  margin-top: -40px;
+  margin-top: -30px;
 }
 
 .hub-status {
@@ -507,11 +513,11 @@ onBeforeUnmount(() => {
 
 /* Batches */
 .batches-card {
-  height: 400px;
+  height: 360px;
 }
 
 .batch-list {
-  height: 320px;
+  flex: 1;
   overflow-y: auto;
 }
 
@@ -545,11 +551,11 @@ onBeforeUnmount(() => {
 
 /* Trend */
 .trend-card {
-  height: 300px;
+  height: 280px;
 }
 
 .trend-content {
-  height: 220px;
+  height: 200px;
 }
 
 .trend-chart {

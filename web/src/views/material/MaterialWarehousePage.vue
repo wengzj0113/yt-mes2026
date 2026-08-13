@@ -23,7 +23,11 @@
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="120" />
         <el-table-column prop="unit" label="单位" width="80" />
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
+        <el-table-column prop="createdAt" label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
       </el-table>
     </el-card>
 
@@ -65,6 +69,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { materialApi } from '@/api/material'
+import { formatDateTime } from '@/composables/datetime'
 import type { MaterialDto } from '@/types/api'
 
 const props = defineProps<{ batchNo?: string }>()

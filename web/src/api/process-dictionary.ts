@@ -1,4 +1,4 @@
-import { get, post, put, httpDelete } from './index'; // Wait, let's check index.ts for delete
+import { get, post, put, httpDelete } from './index';
 
 export interface ProcessDictionaryDto {
   id?: number;

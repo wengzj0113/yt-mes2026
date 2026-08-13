@@ -53,13 +53,19 @@ export class ElectrodeService {
   async submitQuality(dto: SubmitElectrodeQualityDto, userId: number): Promise<ElectrodeRecord> {
     await this.validateBatch(dto.batchNo);
 
+    // Convert number fields to string for nvarchar database columns
+    const dtoForEntity = {
+      ...dto,
+      tabWeldingPull: dto.tabWeldingPull != null ? String(dto.tabWeldingPull) : null,
+    };
+
     return this.dataSource.transaction(async (manager) => {
-      const record = await manager.findOne(ElectrodeRecord, { where: { batchNo: dto.batchNo } });
+      let record = await manager.findOne(ElectrodeRecord, { where: { batchNo: dto.batchNo } });
       if (!record) {
-        throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到极片草稿记录' });
+        record = manager.create(ElectrodeRecord, { batchNo: dto.batchNo, createdBy: userId });
       }
 
-      mergeExtraData(record, dto, ELECTRODE_ENTITY_FIELDS);
+      mergeExtraData(record, dtoForEntity, ELECTRODE_ENTITY_FIELDS);
 
       if (!record.tabMaterialSpec || !record.electrodeLength || !record.operatorName) {
         throw new BadRequestException({
@@ -71,16 +77,6 @@ export class ElectrodeService {
       record.isDraft = false;
       record.updatedBy = userId;
       const saved = await manager.save(record);
-
-      await manager.save(
-        manager.create(QualityCheck, {
-          batchNo: dto.batchNo,
-          processType: 'electrode',
-          inspectionResult: 1,
-          inspectorName: record.operatorName,
-          createdBy: userId,
-        }),
-      );
 
       return saved;
     });

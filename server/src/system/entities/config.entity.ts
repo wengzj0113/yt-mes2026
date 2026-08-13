@@ -5,10 +5,10 @@ export class SystemConfig {
   @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ name: 'key', unique: true })
+  @Column({ name: '[key]', nullable: true })
   key: string;
 
-  @Column({ name: 'value', type: 'nvarchar', length: 'max' })
+  @Column({ name: '[value]', type: 'nvarchar', length: 'max' })
   value: string;
 
   @Column({ name: 'description', type: 'nvarchar', length: 500, nullable: true })

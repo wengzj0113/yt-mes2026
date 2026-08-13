@@ -12,7 +12,10 @@ describe('ProcessDictionaryService', () => {
 
   beforeEach(async () => {
     repo = {
+      find: jest.fn(),
       findOne: jest.fn(),
+      create: jest.fn((data) => data),
+      save: jest.fn(async (data) => data),
       update: jest.fn(),
       delete: jest.fn(),
     };
@@ -30,6 +33,67 @@ describe('ProcessDictionaryService', () => {
     }).compile();
 
     service = module.get<ProcessDictionaryService>(ProcessDictionaryService);
+  });
+
+  describe('standard OCV fields', () => {
+    it('uses the same parameter definitions for OCV1, OCV2, and sorting', async () => {
+      const processes: any[] = [
+        { processCode: 'sorting', fieldDefinitions: null },
+        { processCode: 'ocv1', fieldDefinitions: null },
+        { processCode: 'ocv2', fieldDefinitions: null },
+      ];
+      repo.find.mockResolvedValue(processes);
+
+      await service.onModuleInit();
+
+      const fieldsByCode = new Map(
+        processes.map((process) => [process.processCode, JSON.parse(process.fieldDefinitions)]),
+      );
+      expect(fieldsByCode.get('ocv1')).toEqual(fieldsByCode.get('sorting'));
+      expect(fieldsByCode.get('ocv2')).toEqual(fieldsByCode.get('sorting'));
+      expect(fieldsByCode.get('ocv1')).toEqual(expect.arrayContaining([
+        expect.objectContaining({ key: 'equipmentCode', type: 'text', required: true, isSystem: true }),
+        expect.objectContaining({ key: 'ocvVoltageRange', type: 'range', minKey: 'ocvVoltageMin', maxKey: 'ocvVoltageMax' }),
+        expect.objectContaining({ key: 'irRange', type: 'range', minKey: 'irMin', maxKey: 'irMax' }),
+        expect.objectContaining({ key: 'capacityRange', type: 'range', minKey: 'capacityMin', maxKey: 'capacityMax' }),
+        expect.objectContaining({ key: 'operatorName', type: 'text', required: true, isSystem: true }),
+      ]));
+    });
+
+    it('creates missing OCV process definitions for an existing dictionary', async () => {
+      const processes: any[] = [
+        { processCode: 'sorting', fieldDefinitions: null },
+      ];
+      repo.find.mockResolvedValue(processes);
+
+      await service.onModuleInit();
+
+      expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({
+        processCode: 'ocv1',
+        processName: 'OCV1测试',
+        sortOrder: 125,
+        isActive: true,
+      }));
+      expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({
+        processCode: 'ocv2',
+        processName: 'OCV2测试',
+        sortOrder: 128,
+        isActive: true,
+      }));
+    });
+
+    it('normalizes the built-in OCV process order', async () => {
+      const processes: any[] = [
+        { processCode: 'ocv1', sortOrder: 130, fieldDefinitions: null },
+        { processCode: 'ocv2', sortOrder: 140, fieldDefinitions: null },
+      ];
+      repo.find.mockResolvedValue(processes);
+
+      await service.onModuleInit();
+
+      expect(processes.find(process => process.processCode === 'ocv1')?.sortOrder).toBe(125);
+      expect(processes.find(process => process.processCode === 'ocv2')?.sortOrder).toBe(128);
+    });
   });
 
   describe('remove', () => {

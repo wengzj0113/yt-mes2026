@@ -66,16 +66,6 @@ export class RollerPressingService {
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
 
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo,
-        processType: 'roller-pressing',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
-
     return saved;
   }
 

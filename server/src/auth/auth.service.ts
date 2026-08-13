@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -53,6 +53,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       username: user.username,
+      realName: user.realName,
       roleCode: user.roleCode,
     };
 
@@ -85,7 +86,7 @@ export class AuthService {
       if (!user || !user.isActive) {
         throw new UnauthorizedException({ code: 'UNAUTHORIZED', message: 'Token 无效' });
       }
-      const newPayload = { sub: user.id, username: user.username, roleCode: user.roleCode };
+      const newPayload = { sub: user.id, username: user.username, realName: user.realName, roleCode: user.roleCode };
       const accessToken = this.jwtService.sign(newPayload);
       return { data: { accessToken } };
     } catch {
@@ -93,12 +94,34 @@ export class AuthService {
     }
   }
 
+  async logout(userId: number) {
+    // JWT is stateless; logout is primarily client-side.
+    // This endpoint serves audit logging purposes.
+    return { data: { message: '登出成功' } };
+  }
+
+  async changePassword(userId: number, dto: any) {
+    const user = await this.userService.findById(userId);
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+
+    const valid = await bcrypt.compare(dto.oldPassword, user.password);
+    if (!valid) {
+      throw new BadRequestException('旧密码错误');
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(dto.newPassword, salt);
+    await this.userService.updatePassword(userId, hashedPassword);
+
+    return { message: '密码修改成功' };
+  }
+
   private getRefreshSecret(): string {
-    const secret =
-      this.configService.get<string>('JWT_REFRESH_SECRET') ||
-      this.configService.get<string>('JWT_SECRET');
+    const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
     if (!secret) {
-      throw new Error('JWT secret environment variable is required');
+      throw new Error('JWT_REFRESH_SECRET environment variable is required');
     }
     return secret;
   }

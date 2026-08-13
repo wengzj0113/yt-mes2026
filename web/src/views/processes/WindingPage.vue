@@ -13,11 +13,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { masterDataApi } from '@/api/master-data'
 import { materialApi } from '@/api/material'
+import { useAuthStore } from '@/stores/auth'
 import ProcessFormPage from './ProcessFormPage.vue'
 import type { FormField } from './useProcess'
 
 const props = defineProps<{ batchNo?: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
+const authStore = useAuthStore()
 
 const route = useRoute()
 const batchNo = computed(() => props.batchNo ?? (route.params.batchNo as string))
@@ -26,11 +28,11 @@ const operatorOptions = ref<Array<{ label: string; value: string }>>([])
 const separatorOptions = ref<Array<{ label: string; value: string }>>([])
 
 const draftFields = computed<FormField[]>(() => [
-  { key: 'equipmentCode', label: '设备编号', type: 'select', options: equipmentOptions.value },
-  { key: 'separatorModel', label: '隔膜型号', type: 'select', options: separatorOptions.value },
-  { key: 'windingSpeed', label: '卷绕速度(rpm)', type: 'number' },
-  { key: 'windingTension', label: '卷绕张力(N)', type: 'number' },
-  { key: 'operatorName', label: '操作员', type: 'select', options: operatorOptions.value },
+  { key: 'equipmentCode', label: '设备编号', type: 'select', options: equipmentOptions.value, helpText: '卷绕机设备编号' },
+  { key: 'separatorModel', label: '隔膜型号', type: 'select', options: separatorOptions.value, helpText: '本批次使用的隔膜型号' },
+  { key: 'windingSpeed', label: '卷绕速度(rpm)', type: 'number', helpText: '卷绕头转速' },
+  { key: 'windingTension', label: '卷绕张力(N)', type: 'number', helpText: '卷绕时的张力大小' },
+  { key: 'operatorName', label: '操作员', type: 'select', options: operatorOptions.value, defaultValue: authStore.user?.realName ?? '', helpText: '负责本工序的操作员' },
 ])
 const qualityFields: FormField[] = [
   { key: 'coreThickness', label: '电芯厚度(mm)', type: 'number' },

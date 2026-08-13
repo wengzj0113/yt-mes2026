@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h2 class="login-title">YT-MES</h2>
+      <h2 class="login-title">云通MES</h2>
       <p class="login-subtitle">电芯生产追溯系统</p>
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
         <el-form-item prop="username">
@@ -16,6 +16,9 @@
           </el-button>
         </el-form-item>
       </el-form>
+      <p class="register-link">
+        没有账号？<router-link to="/register">立即注册</router-link>
+      </p>
       <p v-if="error" class="login-error">{{ error }}</p>
     </div>
   </div>
@@ -69,4 +72,6 @@ async function handleLogin() {
 .login-title { text-align: center; font-size: 28px; font-weight: bold; color: #1a237e; margin-bottom: 4px; }
 .login-subtitle { text-align: center; color: #909399; margin-bottom: 30px; font-size: 14px; }
 .login-error { color: #f56c6c; text-align: center; font-size: 13px; }
+.register-link { text-align: center; color: #909399; margin: 16px 0 0; font-size: 13px; }
+.register-link a { color: #409eff; text-decoration: none; }
 </style>

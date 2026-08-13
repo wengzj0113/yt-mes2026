@@ -1,13 +1,13 @@
-import { Controller, Sse, MessageEvent } from '@nestjs/common';
+import { Controller, Sse, MessageEvent, UseGuards } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { DashboardService } from './dashboard.service';
-import { Public } from '../common/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
-  @Public()
   @Sse('stream')
   stream(): Observable<MessageEvent> {
     return this.dashboardService.getStreamData() as Observable<MessageEvent>;

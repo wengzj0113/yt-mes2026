@@ -77,7 +77,7 @@ export class SeedService {
             batchNo: item.no,
             voltage: 3.2 + Math.random() * 0.1,
             internalResistance: 0.5 + Math.random() * 0.2,
-            capacity: (item.qty > 500 ? 50000 : 100000) + Math.random() * 500,
+            capacity: ((item.qty > 500 ? 50000 : 100000) + Math.random() * 500).toFixed(2),
             kValue: 0.01 + Math.random() * 0.005,
             grade: grades[i - 1],
             sortingTime: new Date(),
@@ -185,6 +185,8 @@ export class SeedService {
       { processCode: 'wrapping', processName: '顶封', sortOrder: 100, isActive: true },
       { processCode: 'formation', processName: '化成', sortOrder: 110, isActive: true },
       { processCode: 'grading', processName: '分容', sortOrder: 120, isActive: true },
+      { processCode: 'ocv1', processName: 'OCV1测试', sortOrder: 125, isActive: true },
+      { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 128, isActive: true },
       { processCode: 'sorting', processName: '分选', sortOrder: 130, isActive: true },
     ]);
     await this.processDictRepo.save(processes);

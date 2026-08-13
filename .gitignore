@@ -40,6 +40,7 @@ db.json
 # Tool specific
 .trae/
 .figma/
+.worktrees/
 test-results/
 playwright-report/
 blob-report/

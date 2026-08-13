@@ -53,9 +53,9 @@ export class InjectionService {
   async submitQuality(dto: SubmitInjectionQualityDto, userId: number): Promise<InjectionRecord> {
     await this.validateBatch(dto.batchNo);
 
-    const record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
+    let record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (!record) {
-      throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到注液草稿记录' });
+      record = this.repo.create({ batchNo: dto.batchNo, createdBy: userId });
     }
 
     mergeExtraData(record, dto, INJECTION_ENTITY_FIELDS);
@@ -70,16 +70,6 @@ export class InjectionService {
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
-
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo: dto.batchNo,
-        processType: 'injection',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
 
     return saved;
   }

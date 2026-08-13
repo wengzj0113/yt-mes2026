@@ -6,3 +6,7 @@ export const loginApi = {
     return post<LoginResult>('/auth/login', dto)
   },
 }
+
+export async function changePassword(data: { oldPassword: string; newPassword: string }) {
+  return post('/auth/change-password', data)
+}

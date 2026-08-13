@@ -8,8 +8,26 @@ import { CreateSortingDraftDto } from './dto/create-draft.dto';
 import { mergeExtraData } from '../../common/utils/process-record.util';
 
 const SORTING_ENTITY_FIELDS = [
-  'equipmentCode', 'ocvVoltageRange', 'irRange', 'capacityRange', 'operatorName'
+  'equipmentCode',
+  'ocvVoltageMin', 'ocvVoltageMax',
+  'irMin', 'irMax',
+  'capacityMin', 'capacityMax',
+  'operatorName',
 ];
+
+function assertRange(
+  fieldLabel: string,
+  min: number | null | undefined,
+  max: number | null | undefined,
+) {
+  if (min == null || max == null) return;
+  if (Number(min) > Number(max)) {
+    throw new BadRequestException({
+      code: 'PROCESS_RANGE_INVALID',
+      message: `${fieldLabel} 范围的最小值不能大于最大值`,
+    });
+  }
+}
 
 @Injectable()
 export class SortingService {
@@ -55,26 +73,26 @@ export class SortingService {
     if (!record) {
       throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到分选草稿记录' });
     }
-    if (!record.equipmentCode || !record.ocvVoltageRange || !record.irRange || !record.capacityRange || !record.operatorName) {
+    if (
+      !record.equipmentCode ||
+      record.ocvVoltageMin == null || record.ocvVoltageMax == null ||
+      record.irMin == null || record.irMax == null ||
+      record.capacityMin == null || record.capacityMax == null ||
+      !record.operatorName
+    ) {
       throw new BadRequestException({
         code: 'PROCESS_FIELDS_INCOMPLETE',
         message: '操作员字段未填写完整，请先保存草稿',
       });
     }
 
+    assertRange('OCV电压', record.ocvVoltageMin, record.ocvVoltageMax);
+    assertRange('内阻',   record.irMin,          record.irMax);
+    assertRange('容量',   record.capacityMin,    record.capacityMax);
+
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
-
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo,
-        processType: 'sorting',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
 
     return saved;
   }

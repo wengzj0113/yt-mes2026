@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>YT-MES 分选机 / OCV 测试机数据接口文档 v3.0</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            line-height: 1.8;
+            margin: 40px;
+            color: #333;
+            background: #f5f7fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        h1, h2, h3 { color: #1f4e79; }
+        h1 {
+            border-bottom: 3px solid #1f4e79;
+            padding-bottom: 10px;
+        }
+        h2 {
+            margin-top: 40px;
+            border-left: 5px solid #1f4e79;
+            padding-left: 10px;
+        }
+        h3 { margin-top: 24px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        table th { background: #eaf2f8; }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            overflow-x: auto;
+            border-radius: 6px;
+        }
+        code { font-family: Consolas, monospace; }
+        .note {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 5px solid #ffc107;
+            margin: 20px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            padding: 15px;
+            border-left: 5px solid #17a2b8;
+            margin: 20px 0;
+        }
+        .warn {
+            background: #f8d7da;
+            padding: 15px;
+            border-left: 5px solid #dc3545;
+            margin: 20px 0;
+        }
+        .required { color: #dc3545; font-weight: bold; }
+        .optional { color: #6c757d; }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+        .tag.post { background: #d4edda; color: #155724; }
+        .tag.get { background: #d1ecf1; color: #0c5460; }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.s200 { background: #d4edda; color: #155724; }
+        .status.s201 { background: #d4edda; color: #155724; }
+        .status.s400 { background: #fff3cd; color: #856404; }
+        .status.s404 { background: #f8d7da; color: #721c24; }
+        .status.s409 { background: #f8d7da; color: #721c24; }
+        .toc {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .toc li { list-style: none; margin: 6px 0; }
+        .toc a { text-decoration: none; color: #1f4e79; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>YT-MES 分选机 / OCV 测试机数据接口文档 v3.0</h1>
+
+<div class="info">
+    <strong>📅 文档版本</strong>：v3.0<br>
+    <strong>📝 更新内容</strong>：整合分选机、Sorter、OCV1、OCV2 四大测试设备的统一接口规范，包含最新的字段兼容性方案、覆盖写入逻辑与事务原子性保证。
+</div>
+
+<div class="toc">
+    <strong>目录</strong>
+    <ul>
+        <li><a href="#overview">1. 概述</a></li>
+        <li><a href="#endpoints">2. 接口列表</a></li>
+        <li><a href="#common">3. 通用规范</a></li>
+        <li><a href="#sorter">4. 分选机 (Sorter) 接口</a></li>
+        <li><a href="#ocv1">5. OCV1 测试机接口</a></li>
+        <li><a href="#ocv2">6. OCV2 测试机接口</a></li>
+        <li><a href="#errors">7. 通用错误响应</a></li>
+        <li><a href="#deploy">8. 硬件部署指南</a></li>
+    </ul>
+</div>
+
+<h2 id="overview">1. 概述</h2>
+
+<p>YT-MES 系统为分选机、OCV1 测试机、OCV2 测试机等外部硬件设备提供标准 REST API 接口，用于将电芯测试数据上传至 MES 系统。</p>
+
+<table>
+    <tr><th>项目</th><th>说明</th></tr>
+    <tr><td>接口风格</td><td>RESTful API</td></tr>
+    <tr><td>数据格式</td><td>JSON</td></tr>
+    <tr><td>认证方式</td><td>免认证（无需 Token）</td></tr>
+    <tr><td>Base URL</td><td><code>http://{服务器IP}:3001/api/cells</code> 或通过 Nginx 转发的 <code>http://{服务器IP}/api/cells</code></td></tr>
+    <tr><td>目标数据表</td><td><code>cell_barcode</code>（电芯主表）、<code>ocv1_record</code> / <code>ocv2_record</code>（工序记录表）</td></tr>
+    <tr><td>数据来源标记</td><td>导入数据时 <code>import_source</code> 自动标记为 <code>'sorter'</code> / <code>'ocv1'</code> / <code>'ocv2'</code></td></tr>
+</table>
+
+<div class="warn">
+    <strong>⚠️ 安全提醒</strong>：接口免 Token 认证，生产环境<strong>必须</strong>通过防火墙、网关白名单等方式限制访问来源 IP，仅允许测试设备所在网段调用。
+</div>
+
+<h2 id="endpoints">2. 接口列表</h2>
+
+<table>
+    <tr><th>设备类型</th><th>请求方法</th><th>接口路径</th><th>用途</th></tr>
+    <tr><td rowspan="2">分选机</td><td><span class="tag post">POST</span></td><td><code>/api/cells/sorter-upload</code></td><td>单条实时上传（每测完一个电芯实时上传）</td></tr>
+    <tr><td><span class="tag post">POST</span></td><td><code>/api/cells/sorter-upload/bulk</code></td><td>批量上传（一次性推送本地缓存数据）</td></tr>
+    <tr><td rowspan="2">OCV1 测试机</td><td><span class="tag post">POST</span></td><td><code>/api/cells/ocv1-upload</code></td><td>OCV1 单条实时上传</td></tr>
+    <tr><td><span class="tag post">POST</span></td><td><code>/api/cells/ocv1-upload/bulk</code></td><td>OCV1 批量上传</td></tr>
+    <tr><td rowspan="2">OCV2 测试机</td><td><span class="tag post">POST</span></td><td><code>/api/cells/ocv2-upload</code></td><td>OCV2 单条实时上传</td></tr>
+    <tr><td><span class="tag post">POST</span></td><td><code>/api/cells/ocv2-upload/bulk</code></td><td>OCV2 批量上传</td></tr>
+</table>
+
+<h2 id="common">3. 通用规范</h2>
+
+<h3>3.1 通用响应结构</h3>
+<p>所有接口统一返回以下 JSON 结构：</p>
+<pre><code>{
+  "success": true,
+  "data": ...,
+  "message": "ok"
+}</code></pre>
+
+<h3>3.2 通用字段兼容性</h3>
+
+<table>
+    <tr><th>字段名</th><th>支持类型</th><th>说明</th></tr>
+    <tr>
+        <td><code>capacity</code></td>
+        <td>string | number</td>
+        <td>支持数值（如 <code>2660</code>）或范围字符串（如 <code>"2600-2650"</code>）。系统自动将数值转换为字符串。</td>
+    </tr>
+    <tr>
+        <td><code>internalResistance</code> 或 <code>resistance</code></td>
+        <td>number</td>
+        <td>支持两个字段名（互为别名），优先读取 <code>internalResistance</code>。</td>
+    </tr>
+    <tr>
+        <td><code>voltage</code></td>
+        <td>number</td>
+        <td>支持大数值（如 <code>10000</code>），数据库精度为 DECIMAL(12,4)。</td>
+    </tr>
+</table>
+
+<h3>3.3 写入逻辑（覆盖更新）</h3>
+<ul>
+    <li><strong>覆盖更新</strong>：若上传的 <code>barcode</code> 在数据库中已存在，系统会<strong>自动用新数据覆盖已有字段</strong>，不会报错。</li>
+    <li><strong>允许提前上传</strong>：OCV1/OCV2 接口<strong>允许在分选机之前上传</strong>，系统会自动创建"半成品"电芯记录（仅有 OCV 字段，其他字段为 null）。</li>
+    <li><strong>批量原子性</strong>：批量上传时使用 TypeORM 事务，任一记录校验失败则<strong>整批回滚</strong>，不会部分写入。</li>
+</ul>
+
+<h3>3.4 批次前置条件</h3>
+<p>所有接口要求 <code>batchNo</code> 已存在于 MES 系统中（先在批次管理页面创建批次），否则返回 <span class="status s404">404</span> 错误。</p>
+
+<h2 id="sorter">4. 分选机 (Sorter) 接口</h2>
+
+<h3>4.1 单条上传</h3>
+<p><span class="tag post">POST</span> <code>/api/cells/sorter-upload</code></p>
+
+<h4>请求体参数</h4>
+<table>
+    <tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr>
+    <tr><td><code>barcode</code></td><td>string</td><td class="required">是</td><td>电芯条码（最大 32 字符）</td></tr>
+    <tr><td><code>batchNo</code></td><td>string</td><td class="required">是</td><td>所属批次号（最大 16 字符）</td></tr>
+    <tr><td><code>capacity</code></td><td>string | number</td><td class="optional">否</td><td>电芯容量（mAh）</td></tr>
+    <tr><td><code>voltage</code></td><td>number</td><td class="optional">否</td><td>开路电压（V）</td></tr>
+    <tr><td><code>internalResistance</code> / <code>resistance</code></td><td>number</td><td class="optional">否</td><td>交流内阻（mΩ）</td></tr>
+    <tr><td><code>kValue</code></td><td>number</td><td class="optional">否</td><td>K 值（自放电率，mV/h）</td></tr>
+    <tr><td><code>grade</code></td><td>string</td><td class="optional">否</td><td>分选档位（A / B / C / 22）</td></tr>
+    <tr><td><code>sortingTime</code></td><td>string</td><td class="optional">否</td><td>分选时间（ISO 8601 格式）</td></tr>
+</table>
+
+<h4>请求体示例</h4>
+<pre><code>{
+  "barcode": "9146I2101883",
+  "batchNo": "BAT-649729",
+  "capacity": 2660,
+  "voltage": 10000,
+  "resistance": 10000,
+  "kValue": 0.05,
+  "grade": "A",
+  "sortingTime": "2026-06-16 18:38:15"
+}</code></pre>
+
+<h4>成功响应 <span class="status s201">201</span></h4>
+<pre><code>{
+  "success": true,
+  "data": {
+    "id": 52,
+    "barcode": "9146I2101883",
+    "batchNo": "BAT-649729",
+    "voltage": 10000,
+    "internalResistance": 10000,
+    "capacity": "2660",
+    "kValue": 0.05,
+    "sortingTime": "2026-06-16T10:38:15.000Z",
+    "grade": "A",
+    "importSource": "sorter"
+  },
+  "message": "分选数据接收成功"
+}</code></pre>
+
+<h3>4.2 批量上传</h3>
+<p><span class="tag post">POST</span> <code>/api/cells/sorter-upload/bulk</code></p>
+
+<h4>请求体示例</h4>
+<pre><code>{
+  "cells": [
+    {
+      "barcode": "9146I2101883",
+      "batchNo": "BAT-649729",
+      "capacity": "2600-2650",
+      "voltage": 3.685,
+      "resistance": 19.8,
+      "grade": "A"
+    },
+    {
+      "barcode": "9146I2101884",
+      "batchNo": "BAT-649729",
+      "capacity": 2660,
+      "voltage": 3.690,
+      "internalResistance": 19.5,
+      "grade": "A"
+    }
+  ]
+}</code></pre>
+
+<div class="note">
+    <strong>💡 提示</strong>：批量接口的数组字段名是 <code>cells</code>。若数组内部存在重复 <code>barcode</code>，系统自动去重（仅保留最后一条）。整批使用事务，任一记录失败则全部回滚。
+</div>
+
+<h2 id="ocv1">5. OCV1 测试机接口</h2>
+
+<p>OCV1 测试位于<strong>化成之后、分容之前</strong>，用于记录电芯的第一次开路电压（OCV）测试数据。OCV1 数据可先于分选机上传，系统会自动创建"半成品"电芯记录。</p>
+
+<h3>5.1 单条上传</h3>
+<p><span class="tag post">POST</span> <code>/api/cells/ocv1-upload</code></p>
+
+<h4>请求体参数</h4>
+<table>
+    <tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr>
+    <tr><td><code>barcode</code></td><td>string</td><td class="required">是</td><td>电芯条码（最大 32 字符）</td></tr>
+    <tr><td><code>batchNo</code></td><td>string</td><td class="required">是</td><td>所属批次号</td></tr>
+    <tr><td><code>voltage</code></td><td>number</td><td class="optional">否</td><td>OCV1 测试电压</td></tr>
+    <tr><td><code>resistance</code> / <code>internalResistance</code></td><td>number</td><td class="optional">否</td><td>OCV1 测试内阻</td></tr>
+    <tr><td><code>testTime</code></td><td>string</td><td class="optional">否</td><td>OCV1 测试时间</td></tr>
+    <tr><td><code>equipmentCode</code></td><td>string</td><td class="optional">否</td><td>OCV1 测试设备编号（不验证字典）</td></tr>
+</table>
+
+<h4>请求体示例</h4>
+<pre><code>{
+  "barcode": "9146I2101883",
+  "batchNo": "BAT-649729",
+  "voltage": 3.685,
+  "resistance": 19.5,
+  "testTime": "2026-06-16 18:38:15",
+  "equipmentCode": "OCV-001"
+}</code></pre>
+
+<h4>成功响应 <span class="status s201">201</span></h4>
+<pre><code>{
+  "success": true,
+  "data": {
+    "id": 53,
+    "barcode": "9146I2101883",
+    "batchNo": "BAT-649729",
+    "importSource": "ocv1",
+    "ocv1Voltage": 3.685,
+    "ocv1Resistance": 19.5,
+    "ocv1Time": "2026-06-16T10:38:15.000Z",
+    "ocv1EquipmentCode": "OCV-001"
+  },
+  "message": "OCV1测试数据接收成功"
+}</code></pre>
+
+<h3>5.2 批量上传</h3>
+<p><span class="tag post">POST</span> <code>/api/cells/ocv1-upload/bulk</code></p>
+
+<h4>请求体示例</h4>
+<pre><code>{
+  "ocv1Records": [
+    {
+      "barcode": "9146I2101883",
+      "batchNo": "BAT-649729",
+      "voltage": 3.685,
+      "resistance": 19.5,
+      "equipmentCode": "OCV-001"
+    },
+    {
+      "barcode": "9146I2101884",
+      "batchNo": "BAT-649729",
+      "voltage": 3.690,
+      "resistance": 19.8,
+      "equipmentCode": "OCV-001"
+    }
+  ]
+}</code></pre>
+
+<h2 id="ocv2">6. OCV2 测试机接口</h2>
+
+<p>OCV2 测试位于<strong>分容之后、分选之前</strong>，用于记录电芯的第二次开路电压测试数据（通常用于计算 K 值）。</p>
+
+<h3>6.1 单条上传</h3>
+<p><span class="tag post">POST</span> <code>/api/cells/ocv2-upload</code></p>
+
+<h4>请求体参数</h4>
+<table>
+    <tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr>
+    <tr><td><code>barcode</code></td><td>string</td><td class="required">是</td><td>电芯条码</td></tr>
+    <tr><td><code>batchNo</code></td><td>string</td><td class="required">是</td><td>所属批次号</td></tr>
+    <tr><td><code>voltage</code></td><td>number</td><td class="optional">否</td><td>OCV2 测试电压</td></tr>
+    <tr><td><code>resistance</code> / <code>internalResistance</code></td><td>number</td><td class="optional">否</td><td>OCV2 测试内阻</td></tr>
+    <tr><td><code>kValue</code></td><td>number</td><td class="optional">否</td><td>K 值（自放电率）</td></tr>
+    <tr><td><code>testTime</code></td><td>string</td><td class="optional">否</td><td>OCV2 测试时间</td></tr>
+    <tr><td><code>equipmentCode</code></td><td>string</td><td class="optional">否</td><td>OCV2 测试设备编号</td></tr>
+</table>
+
+<h4>请求体示例</h4>
+<pre><code>{
+  "barcode": "9146I2101883",
+  "batchNo": "BAT-649729",
+  "voltage": 3.682,
+  "resistance": 19.6,
+  "kValue": 0.05,
+  "testTime": "2026-06-17 10:00:00",
+  "equipmentCode": "OCV-002"
+}</code></pre>
+
+<h4>成功响应 <span class="status s201">201</span></h4>
+<pre><code>{
+  "success": true,
+  "data": {
+    "id": 53,
+    "barcode": "9146I2101883",
+    "batchNo": "BAT-649729",
+    "kValue": 0.05,
+    "importSource": "ocv1",
+    "ocv1Voltage": 3.685,
+    "ocv1Resistance": 19.5,
+    "ocv2Voltage": 3.682,
+    "ocv2Resistance": 19.6,
+    "ocv2Time": "2026-06-17T02:00:00.000Z",
+    "ocv2EquipmentCode": "OCV-002"
+  },
+  "message": "OCV2测试数据接收成功"
+}</code></pre>
+
+<div class="info">
+    <strong>💡 K 值优先级</strong>：OCV2 的 <code>kValue</code> 会同步写入 <code>cell_barcode.kValue</code> 字段。若后续分选机也上传了 <code>kValue</code>，将以<strong>分选机为准</strong>（覆盖 OCV2 的值）。
+</div>
+
+<h3>6.2 批量上传</h3>
+<p><span class="tag post">POST</span> <code>/api/cells/ocv2-upload/bulk</code></p>
+
+<h4>请求体示例</h4>
+<pre><code>{
+  "ocv2Records": [
+    {
+      "barcode": "9146I2101883",
+      "batchNo": "BAT-649729",
+      "voltage": 3.682,
+      "resistance": 19.6,
+      "kValue": 0.05,
+      "equipmentCode": "OCV-002"
+    },
+    {
+      "barcode": "9146I2101884",
+      "batchNo": "BAT-649729",
+      "voltage": 3.688,
+      "resistance": 19.7,
+      "kValue": 0.06,
+      "equipmentCode": "OCV-002"
+    }
+  ]
+}</code></pre>
+
+<h2 id="errors">7. 通用错误响应</h2>
+
+<h3>7.1 批次不存在 <span class="status s404">404</span></h3>
+<pre><code>{
+  "success": false,
+  "message": "批次 BAT-649729 不存在"
+}</code></pre>
+
+<h3>7.2 参数校验错误 <span class="status s400">400</span></h3>
+<pre><code>{
+  "success": false,
+  "message": "请求参数校验失败",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "fields": [
+      { "field": "barcode", "message": "barcode must be a string" }
+    ]
+  }
+}</code></pre>
+
+<h2 id="deploy">8. 硬件部署指南</h2>
+
+<h3>8.1 网络互通</h3>
+<ol>
+    <li>确保测试设备工控机与 MES 服务器处于<strong>同一个局域网</strong>内。</li>
+    <li>在工控机上运行 <code>ping {MES服务器IP}</code>，确保网络可达。</li>
+</ol>
+
+<h3>8.2 配置目标 URL</h3>
+<p>在设备的"数据上传配置"中，配置目标 API 地址：</p>
+<table>
+    <tr><th>设备</th><th>URL</th></tr>
+    <tr><td>分选机</td><td><code>http://{MES_IP}:3001/api/cells/sorter-upload</code></td></tr>
+    <tr><td>OCV1 测试机</td><td><code>http://{MES_IP}:3001/api/cells/ocv1-upload</code></td></tr>
+    <tr><td>OCV2 测试机</td><td><code>http://{MES_IP}:3001/api/cells/ocv2-upload</code></td></tr>
+</table>
+
+<h3>8.3 安全防护</h3>
+<div class="warn">
+    由于这些接口免 Token 认证，为了防止数据被恶意篡改，<strong>必须在服务器的防火墙或网关上设置白名单</strong>，仅允许测试设备工控机的 IP 地址访问 <code>3001</code> 端口。
+</div>
+
+<h3>8.4 业务前置条件</h3>
+<p>测试设备上传数据前，操作工必须先在 MES 系统中<strong>创建好对应的批次号</strong>（如 <code>BAT-649729</code>），否则接口会返回 <span class="status s404">404</span> 错误。</p>
+
+<h3>8.5 接口日志</h3>
+<p>所有 6 个接口的调用日志都会被自动记录到 <code>sorter_api_log</code> 表中，保留 3 天。可在 MES 系统的"系统管理 → 接口日志"页面查看，按 <code>api_type</code> 字段（<code>sorter</code> / <code>ocv1</code> / <code>ocv2</code>）筛选。</p>
+
+</div>
+</body>
+</html>

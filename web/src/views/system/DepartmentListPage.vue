@@ -14,7 +14,11 @@
             <el-tag :type="row.isActive ? 'success' : 'info'" size="small">{{ row.isActive ? '启用' : '禁用' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
+        <el-table-column prop="createdAt" label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button size="small" @click="openEdit(row)">编辑</el-button>
@@ -49,6 +53,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { departmentApi } from '@/api/departments'
+import { formatDateTime } from '@/composables/datetime'
 import type { DepartmentDto } from '@/types/api'
 
 const list = ref<DepartmentDto[]>([])

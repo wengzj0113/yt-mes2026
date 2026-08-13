@@ -11,6 +11,8 @@ vi.mock('@/api/auth', () => ({
 
 const mockRouterPush = vi.fn()
 vi.mock('vue-router', () => ({
+  createRouter: () => ({ push: vi.fn(), beforeEach: vi.fn() }),
+  createWebHistory: () => ({}),
   useRouter: () => ({ push: mockRouterPush }),
   useRoute: () => ({}),
 }))
@@ -25,6 +27,6 @@ function factory() {
 describe('LoginPage', () => {
   it('renders login form', () => {
     const wrapper = factory()
-    expect(wrapper.text()).toContain('YT-MES')
+    expect(wrapper.text()).toContain('云通MES')
   })
 })

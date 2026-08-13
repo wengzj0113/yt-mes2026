@@ -53,9 +53,9 @@ export class BakingService {
   async submitQuality(dto: SubmitBakingQualityDto, userId: number): Promise<BakingRecord> {
     await this.validateBatch(dto.batchNo);
 
-    const record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
+    let record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (!record) {
-      throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到烘烤草稿记录' });
+      record = this.repo.create({ batchNo: dto.batchNo, createdBy: userId });
     }
 
     mergeExtraData(record, dto, BAKING_ENTITY_FIELDS);
@@ -70,16 +70,6 @@ export class BakingService {
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
-
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo: dto.batchNo,
-        processType: 'baking',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
 
     return saved;
   }

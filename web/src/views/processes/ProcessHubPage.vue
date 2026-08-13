@@ -41,8 +41,14 @@
     </template>
 
     <!-- Drawer -->
-    <el-drawer v-model="drawerVisible" :title="`${currentProcess?.processName} - 数据录入`" size="600px" destroy-on-close>
-      <component :is="currentComponent" :batchNo="batchInfo?.batchNo" @close="handleDrawerClose" />
+    <el-drawer 
+      v-model="drawerVisible" 
+      :title="`${currentProcess?.processName} - 数据录入`" 
+      size="600px" 
+      destroy-on-close
+      @closed="handleDrawerClose"
+    >
+      <component :is="currentComponent" :batchNo="batchInfo?.batchNo" @close="drawerVisible = false" />
     </el-drawer>
   </div>
 </template>
@@ -67,6 +73,8 @@ import InjectionPage from './InjectionPage.vue';
 import WrappingPage from './WrappingPage.vue';
 import FormationPage from './FormationPage.vue';
 import GradingPage from './GradingPage.vue';
+import Ocv1Page from './Ocv1Page.vue';
+import Ocv2Page from './Ocv2Page.vue';
 import SortingPage from './SortingPage.vue';
 
 const processComponents: Record<string, any> = {
@@ -82,6 +90,8 @@ const processComponents: Record<string, any> = {
   'wrapping': WrappingPage,
   'formation': FormationPage,
   'grading': GradingPage,
+  'ocv1': Ocv1Page,
+  'ocv2': Ocv2Page,
   'sorting': SortingPage,
 };
 
@@ -148,12 +158,28 @@ function getProcessStatusObj(key: string) {
 }
 
 function getProcessStatus(key: string) {
-  return `status-${getProcessStatusObj(key)}`;
+  const status = getProcessStatusObj(key);
+  if (status === 'saved' || status === 'pending_quality' || status === 'quality_passed') {
+    return 'status-submitted';
+  }
+  if (status === 'quality_failed') {
+    return 'status-failed';
+  }
+  return `status-${status}`;
 }
 
 function getProcessStatusText(key: string) {
-  const status = getProcessStatusObj(key) as 'not_entered' | 'draft' | 'submitted' | 'voided';
-  return { not_entered: '待录入', draft: '草稿中', submitted: '已完成', voided: '已作废' }[status] || '待录入';
+  const status = getProcessStatusObj(key);
+  const map: Record<string, string> = {
+    not_entered: '待录入',
+    saved: '已保存',
+    draft: '已保存',
+    pending_quality: '待质检',
+    quality_passed: '已完成',
+    quality_failed: '质检不合格',
+    voided: '已作废'
+  };
+  return map[status] || '待录入';
 }
 
 function openProcessDrawer(proc: ProcessDictionaryDto) {
@@ -183,5 +209,6 @@ async function handleDrawerClose() {
 .status-not_entered { background-color: #f5f7fa; color: #909399; }
 .status-draft { background-color: #ecf5ff; border-left: 4px solid #409eff; color: #409eff; }
 .status-submitted { background-color: #f0f9eb; border-left: 4px solid #67c23a; color: #67c23a; }
+.status-failed { background-color: #fef0f0; border-left: 4px solid #f56c6c; color: #f56c6c; }
 .status-voided { background-color: #fef0f0; border-left: 4px solid #f56c6c; color: #f56c6c; text-decoration: line-through; }
 </style>

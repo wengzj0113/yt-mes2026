@@ -14,7 +14,10 @@ export const userApi = {
   delete(id: number) {
     return post(`/users/${id}/delete`)
   },
-  resetPassword(id: number) {
-    return post(`/users/${id}/reset-password`)
+  resetPassword(id: number, password?: string) {
+    return post(`/users/${id}/reset-password`, password ? { password } : {})
+  },
+  register(data: { username: string; realName: string; password: string; roleCode: number; phone?: string }) {
+    return post('/users/register', data)
   },
 }

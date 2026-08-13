@@ -52,9 +52,9 @@ export class WrappingService {
   async submitQuality(dto: SubmitWrappingQualityDto, userId: number): Promise<WrappingRecord> {
     await this.validateBatch(dto.batchNo);
 
-    const record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
+    let record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (!record) {
-      throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到包膜草稿记录' });
+      record = this.repo.create({ batchNo: dto.batchNo, createdBy: userId });
     }
 
     mergeExtraData(record, dto, WRAPPING_ENTITY_FIELDS);
@@ -69,16 +69,6 @@ export class WrappingService {
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
-
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo: dto.batchNo,
-        processType: 'wrapping',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
 
     return saved;
   }

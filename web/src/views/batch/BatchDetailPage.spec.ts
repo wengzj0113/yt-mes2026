@@ -1,8 +1,17 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { defineComponent } from 'vue'
 import BatchDetailPage from './BatchDetailPage.vue'
 import { statusLogApi } from '@/api/status-log'
+
+vi.mock('../processes/Ocv1Page.vue', () => ({
+  default: defineComponent({ template: '<div class="batch-ocv1-entry">OCV1 drawer</div>' }),
+}))
+
+vi.mock('../processes/Ocv2Page.vue', () => ({
+  default: defineComponent({ template: '<div class="batch-ocv2-entry">OCV2 drawer</div>' }),
+}))
 
 vi.mock('@/api/batch', () => ({
   batchApi: {
@@ -12,6 +21,8 @@ vi.mock('@/api/batch', () => ({
     }),
     getProcessStatus: vi.fn().mockResolvedValue({
       data: [
+        { processKey: 'ocv1', processName: 'OCV1', route: 'ocv1', status: 'not_entered', isDraft: false, recordStatus: 0, updatedAt: null },
+        { processKey: 'ocv2', processName: 'OCV2', route: 'ocv2', status: 'not_entered', isDraft: false, recordStatus: 0, updatedAt: null },
         { processKey: 'batching', processName: '配料', route: 'batching', status: 'submitted', isDraft: false, recordStatus: 1, updatedAt: null },
         { processKey: 'coating', processName: '涂布', route: 'coating', status: 'draft', isDraft: true, recordStatus: 1, updatedAt: null },
       ],
@@ -36,10 +47,14 @@ vi.mock('@/api/status-log', () => ({
   },
 }))
 
-vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
-  useRoute: () => ({ params: { batchNo: 'WT26A01MA' } }),
-}))
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRouter: () => ({ push: vi.fn() }),
+    useRoute: () => ({ params: { batchNo: 'WT26A01MA' } }),
+  }
+})
 
 function factory() {
   setActivePinia(createPinia())
@@ -59,6 +74,26 @@ describe('BatchDetailPage', () => {
     await flushPromises()
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('配料')
+  })
+
+  it('opens OCV1 and OCV2 from process cards in the shared right drawer', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    const ocv1Card = wrapper.findAll('.proc-card').find(card => card.text().includes('OCV1'))
+    const ocv2Card = wrapper.findAll('.proc-card').find(card => card.text().includes('OCV2'))
+    expect(ocv1Card).toBeDefined()
+    expect(ocv2Card).toBeDefined()
+
+    await ocv1Card!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.batch-ocv1-entry').exists()).toBe(true)
+
+    await wrapper.find('.el-drawer__close-btn').trigger('click')
+    await flushPromises()
+    await ocv2Card!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.batch-ocv2-entry').exists()).toBe(true)
   })
 
   it('renders batch status logs', async () => {

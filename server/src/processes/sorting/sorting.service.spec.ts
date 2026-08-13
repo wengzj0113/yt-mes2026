@@ -20,8 +20,14 @@ describe('SortingService', () => {
     isDraft: true,
     equipmentCode: 'SR-001',
     ocvVoltageRange: '3.0-3.2V',
+    ocvVoltageMin: 3.0,
+    ocvVoltageMax: 3.2,
     irRange: '1.5-2.0mΩ',
+    irMin: 1.5,
+    irMax: 2.0,
     capacityRange: '2800-3000mAh',
+    capacityMin: 2800,
+    capacityMax: 3000,
     operatorName: '张三',
     createdBy: 1,
     createdAt: new Date(),
@@ -70,9 +76,12 @@ describe('SortingService', () => {
     const draftDto = {
       batchNo: 'WT26A01MA',
       equipmentCode: 'SR-001',
-      ocvVoltageRange: '3.0-3.2V',
-      irRange: '1.5-2.0mΩ',
-      capacityRange: '2800-3000mAh',
+      ocvVoltageMin: 3.0,
+      ocvVoltageMax: 3.2,
+      irMin: 1.5,
+      irMax: 2.0,
+      capacityMin: 2800,
+      capacityMax: 3000,
       operatorName: '张三',
     };
 
@@ -142,10 +151,43 @@ describe('SortingService', () => {
       (repo.findOne as jest.Mock).mockResolvedValue({
         ...mockRecord,
         equipmentCode: null,
-        ocvVoltageRange: null,
-        irRange: null,
-        capacityRange: null,
+        ocvVoltageMin: null,
+        ocvVoltageMax: null,
+        irMin: null,
+        irMax: null,
+        capacityMin: null,
+        capacityMax: null,
         operatorName: null,
+      });
+      await expect(service.submitQuality('WT26A01MA', 2)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject when ocvVoltageMin > ocvVoltageMax', async () => {
+      (batchRepo.findOne as jest.Mock).mockResolvedValue(mockBatch);
+      (repo.findOne as jest.Mock).mockResolvedValue({
+        ...mockRecord,
+        ocvVoltageMin: 4.0,
+        ocvVoltageMax: 3.0,
+      });
+      await expect(service.submitQuality('WT26A01MA', 2)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject when irMin > irMax', async () => {
+      (batchRepo.findOne as jest.Mock).mockResolvedValue(mockBatch);
+      (repo.findOne as jest.Mock).mockResolvedValue({
+        ...mockRecord,
+        irMin: 5.0,
+        irMax: 1.0,
+      });
+      await expect(service.submitQuality('WT26A01MA', 2)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject when capacityMin > capacityMax', async () => {
+      (batchRepo.findOne as jest.Mock).mockResolvedValue(mockBatch);
+      (repo.findOne as jest.Mock).mockResolvedValue({
+        ...mockRecord,
+        capacityMin: 4000,
+        capacityMax: 3000,
       });
       await expect(service.submitQuality('WT26A01MA', 2)).rejects.toThrow(BadRequestException);
     });

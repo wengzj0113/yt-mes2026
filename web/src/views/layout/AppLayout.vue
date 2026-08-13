@@ -2,7 +2,7 @@
   <div class="app-layout">
     <el-container style="height: 100vh">
       <el-aside width="220px" class="app-aside">
-        <div class="logo">YT-MES</div>
+        <div class="logo">云通MES</div>
         <el-menu
           :default-active="activeMenu"
           router
@@ -14,9 +14,8 @@
             <el-icon><HomeFilled /></el-icon>
             <span>仪表盘</span>
           </el-menu-item>
-          <el-menu-item index="big-screen-link" @click="openBigScreen">
-            <el-icon><DataLine /></el-icon>
-            <span>大屏看板</span>
+          <el-menu-item index="/trace">
+            <el-icon><Coin /></el-icon><span>电芯追溯</span>
           </el-menu-item>
           <el-menu-item index="/batches">
             <el-icon><List /></el-icon><span>批次管理</span>
@@ -25,11 +24,11 @@
             <el-icon><Monitor /></el-icon>
             <span>现场扫码录入</span>
           </el-menu-item>
-          <el-menu-item index="/trace">
-            <el-icon><Coin /></el-icon><span>电芯追溯</span>
-          </el-menu-item>
           <el-menu-item index="/pack-entry">
             <el-icon><Box /></el-icon><span>Pack 录入</span>
+          </el-menu-item>
+          <el-menu-item index="/quality">
+            <el-icon><Select /></el-icon><span>质检管理</span>
           </el-menu-item>
           <el-sub-menu index="system">
             <template #title><el-icon><Setting /></el-icon><span>系统管理</span></template>
@@ -51,10 +50,17 @@
             <el-menu-item index="/system/logs">
               <el-icon><Document /></el-icon><span>操作日志</span>
             </el-menu-item>
+            <el-menu-item index="/system/sorter-logs">
+              <el-icon><Connection /></el-icon><span>接口日志</span>
+            </el-menu-item>
             <el-menu-item index="/system/settings">
               <el-icon><Tools /></el-icon><span>系统配置</span>
             </el-menu-item>
           </el-sub-menu>
+          <el-menu-item index="big-screen-link" @click="openBigScreen">
+            <el-icon><DataLine /></el-icon>
+            <span>大屏看板</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
       <el-container>
@@ -64,6 +70,7 @@
             <span class="user-info">{{ authStore.user?.username || '用户' }}</span>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item command="changePassword">修改密码</el-dropdown-item>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -74,31 +81,34 @@
         </el-main>
       </el-container>
     </el-container>
+    <ChangePasswordDialog ref="changePwdRef" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { HomeFilled, List, Setting, Coin, User, UserFilled, OfficeBuilding, Monitor, Document, Tools, DataLine, Box } from '@element-plus/icons-vue'
+import { HomeFilled, List, Setting, Coin, User, UserFilled, OfficeBuilding, Monitor, Document, Tools, DataLine, Box, Select, Connection } from '@element-plus/icons-vue'
+import ChangePasswordDialog from '@/views/system/ChangePasswordDialog.vue'
 
 const authStore = useAuthStore()
-const router = useRouter()
 const route = useRoute()
+const router = useRouter()
 const activeMenu = computed(() => route.path)
+const changePwdRef = ref<InstanceType<typeof ChangePasswordDialog>>()
 
 function openBigScreen() {
-  // 开发环境下保持在原端口跳转，生产环境下跳转到 8081 端口
+  // 开发模式：使用 Vue Router 导航
   if (import.meta.env.DEV) {
-    router.push({ name: 'BigScreen' })
+    router.push('/big-screen')
     return
   }
-  
+  // 生产模式：打开独立大屏页面（端口 8081）
   const protocol = window.location.protocol
   const host = window.location.hostname
   const port = '8081'
-  const url = `${protocol}//${host}:${port}`
+  const url = `${protocol}//${host}:${port}/big-screen`
   window.open(url, '_blank')
 }
 
@@ -106,6 +116,8 @@ function handleCommand(cmd: string) {
   if (cmd === 'logout') {
     authStore.logout()
     router.push('/login')
+  } else if (cmd === 'changePassword') {
+    changePwdRef.value?.open()
   }
 }
 </script>

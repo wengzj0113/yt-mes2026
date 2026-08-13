@@ -5,6 +5,17 @@ import IndexPage from './IndexPage.vue'
 
 vi.mock('@/api/batch', () => ({
   batchApi: {
+    getStats: vi.fn().mockResolvedValue({
+      data: {
+        totalBatches: 10,
+        inProgressBatches: 2,
+        dailyPassRate: 96,
+        abnormalCount: 0,
+        integrity: 100,
+      },
+      success: true,
+      message: 'ok',
+    }),
     list: vi.fn().mockResolvedValue({
       data: {
         items: [
@@ -18,9 +29,33 @@ vi.mock('@/api/batch', () => ({
   },
 }))
 
-vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+vi.mock('@/api/system', () => ({
+  systemApi: {
+    logs: vi.fn().mockResolvedValue({
+      data: { items: [] },
+      success: true,
+      message: 'ok',
+    }),
+  },
 }))
+
+vi.mock('@/api/quality', () => ({
+  qualityApi: {
+    getTrends: vi.fn().mockResolvedValue({
+      data: [],
+      success: true,
+      message: 'ok',
+    }),
+  },
+}))
+
+vi.mock('vue-router', async () => {
+  const actual = await vi.importActual<any>('vue-router')
+  return {
+    ...actual,
+    useRouter: () => ({ push: vi.fn() }),
+  }
+})
 
 function factory() {
   setActivePinia(createPinia())
@@ -30,8 +65,8 @@ function factory() {
 describe('Dashboard IndexPage', () => {
   it('renders stats cards', () => {
     const wrapper = factory()
-    expect(wrapper.text()).toContain('批次总数')
-    expect(wrapper.text()).toContain('进行中')
+    expect(wrapper.text()).toContain('累计生产批次')
+    expect(wrapper.text()).toContain('当前在线批次')
   })
 
   it('loads and displays batch stats', async () => {

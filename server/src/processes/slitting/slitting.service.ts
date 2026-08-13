@@ -66,16 +66,6 @@ export class SlittingService {
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
 
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo,
-        processType: 'slitting',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
-
     return saved;
   }
 

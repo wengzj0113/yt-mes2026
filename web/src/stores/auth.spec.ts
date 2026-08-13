@@ -34,7 +34,7 @@ describe('auth store', () => {
   it('logout clears token', async () => {
     const store = useAuthStore()
     await store.login('test', '123456')
-    store.logout()
+    await store.logout()
     expect(store.isLoggedIn).toBe(false)
     expect(localStorage.getItem('token')).toBeNull()
   })
@@ -49,7 +49,7 @@ describe('auth store', () => {
   it('logout clears refreshToken', async () => {
     const store = useAuthStore()
     await store.login('test', '123456')
-    store.logout()
+    await store.logout()
     expect(store.refreshToken).toBe('')
     expect(localStorage.getItem('refreshToken')).toBeNull()
   })

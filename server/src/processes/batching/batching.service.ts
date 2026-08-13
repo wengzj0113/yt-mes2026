@@ -54,9 +54,9 @@ export class BatchingService {
     await this.validateBatch(dto.batchNo);
 
     return this.dataSource.transaction(async (manager) => {
-      const record = await manager.findOne(BatchingRecord, { where: { batchNo: dto.batchNo } });
+      let record = await manager.findOne(BatchingRecord, { where: { batchNo: dto.batchNo } });
       if (!record) {
-        throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到配料草稿记录' });
+        record = manager.create(BatchingRecord, { batchNo: dto.batchNo, createdBy: userId });
       }
       
       mergeExtraData(record, dto, BATCHING_ENTITY_FIELDS);
@@ -72,17 +72,6 @@ export class BatchingService {
       record.isDraft = false;
       record.updatedBy = userId;
       const saved = await manager.save(record);
-
-      // 同步创建质量检验记录
-      await manager.save(
-        manager.create(QualityCheck, {
-          batchNo: dto.batchNo,
-          processType: 'batching',
-          inspectionResult: 1,
-          inspectorName: record.operatorName,
-          createdBy: userId,
-        }),
-      );
 
       return saved;
     });

@@ -11,6 +11,7 @@ export enum BatchStatus {
   IN_PROGRESS = 2,
   COMPLETED = 3,
   CLOSED = 4,
+  QUALITY_ISSUE = 5,
 }
 
 @Entity('batch')

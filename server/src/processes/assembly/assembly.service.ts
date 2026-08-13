@@ -53,11 +53,12 @@ export class AssemblyService {
   async submitQuality(dto: SubmitAssemblyQualityDto, userId: number): Promise<AssemblyRecord> {
     await this.validateBatch(dto.batchNo);
 
-    const record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
+    let record = await this.repo.findOne({ where: { batchNo: dto.batchNo } });
     if (!record) {
-      throw new NotFoundException({ code: 'PROCESS_DRAFT_EXISTS', message: '未找到组装草稿记录' });
+      record = this.repo.create({ batchNo: dto.batchNo, createdBy: userId });
     }
 
+    // Merge all fields from DTO (draft + quality) into the record
     mergeExtraData(record, dto, ASSEMBLY_ENTITY_FIELDS);
 
     if (!record.casingEquipmentCode || !record.shellModel || !record.bottomWeldEquipment
@@ -71,16 +72,6 @@ export class AssemblyService {
     record.isDraft = false;
     record.updatedBy = userId;
     const saved = await this.repo.save(record);
-
-    await this.qualityCheckRepo.save(
-      this.qualityCheckRepo.create({
-        batchNo: dto.batchNo,
-        processType: 'assembly',
-        inspectionResult: 1,
-        inspectorName: record.operatorName,
-        createdBy: userId,
-      }),
-    );
 
     return saved;
   }

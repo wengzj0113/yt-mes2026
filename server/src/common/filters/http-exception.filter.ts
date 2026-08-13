@@ -63,12 +63,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
           : '服务器内部错误';
     }
 
+    const errorBody = (() => {
+      if (code && fields) return { error: { code, fields } };
+      if (code) return { error: { code } };
+      if (fields) return { error: { code: 'VALIDATION_ERROR', fields } };
+      return {};
+    })();
+
     response.status(status).json({
       success: false,
       data: null,
       message,
-      ...(code ? { error: { code } } : {}),
-      ...(fields ? { error: { code, fields } } : {}),
+      ...errorBody,
     });
   }
 }

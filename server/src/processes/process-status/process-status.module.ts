@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProcessStatusService } from './process-status.service';
 import { ProcessStatusController } from './process-status.controller';
 import { ProcessRecordSubscriber } from './process-record.subscriber';
+import { QualityCheck } from '../../quality/quality-check.entity';
 import { BatchingModule } from '../batching/batching.module';
 import { CoatingModule } from '../coating/coating.module';
 import { RollerPressingModule } from '../roller-pressing/roller-pressing.module';
@@ -15,9 +17,11 @@ import { InjectionModule } from '../injection/injection.module';
 import { WrappingModule } from '../wrapping/wrapping.module';
 import { FormationModule } from '../formation/formation.module';
 import { GradingModule } from '../grading/grading.module';
+import { ProcessParameter } from '../../process-parameters/process-parameter.entity';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([QualityCheck, ProcessParameter]),
     BatchingModule,
     CoatingModule,
     RollerPressingModule,

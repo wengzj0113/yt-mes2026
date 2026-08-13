@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CellBarcodeController } from './cell-barcode.controller';
 import { CellBarcodeService } from './cell-barcode.service';
+import { SystemService } from '../system/system.service';
 
 describe('CellBarcodeController', () => {
   let controller: CellBarcodeController;
   let service: jest.Mocked<Partial<CellBarcodeService>>;
+  let systemService: any;
 
   const mockCell = {
     id: 1,
@@ -13,7 +15,7 @@ describe('CellBarcodeController', () => {
     sortingRecordId: null,
     voltage: 3.9540,
     internalResistance: 21.50,
-    capacity: 2050.00,
+    capacity: '2600-2650',
     grade: 'A',
     importSource: 'sorter',
     importedAt: new Date(),
@@ -22,9 +24,13 @@ describe('CellBarcodeController', () => {
 
   beforeEach(async () => {
     service = { trace: jest.fn(), findByBatch: jest.fn(), sorterUpload: jest.fn(), bulkSorterUpload: jest.fn() };
+    systemService = { logSorterApi: jest.fn().mockResolvedValue(null) };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CellBarcodeController],
-      providers: [{ provide: CellBarcodeService, useValue: service }],
+      providers: [
+        { provide: CellBarcodeService, useValue: service },
+        { provide: SystemService, useValue: systemService },
+      ],
     }).compile();
     controller = module.get<CellBarcodeController>(CellBarcodeController);
   });

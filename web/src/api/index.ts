@@ -2,8 +2,15 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import type { ApiResponse } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
-import router from '@/router'
 import { getMockResponse } from './mock'
+
+// Module-level refresh state (must be declared before interceptors that reference them)
+let isRefreshing = false
+let refreshEpoch = 0
+let pendingRequests: Array<{
+  resolve: (token: string) => void
+  reject: (err: unknown) => void
+}> = []
 
 const http = axios.create({
   baseURL: '/api',
@@ -11,7 +18,9 @@ const http = axios.create({
 })
 
 // Vercel/Zeabur 预览环境或无后端环境开启 Mock
-const isPreview = window.location.hostname.includes('vercel.app') ||
+const isPreview = (import.meta as any).env?.MODE === 'test' ||
+                 (import.meta as any).env?.VITEST === true ||
+                 window.location.hostname.includes('vercel.app') ||
                  window.location.hostname.includes('zeabur.app')
 
 http.interceptors.request.use((config) => {
@@ -30,40 +39,31 @@ http.interceptors.request.use((config) => {
     }
   }
 
-  const authStore = useAuthStore()
+  // 公开接口不添加 Authorization header
+  const url = config.url || ''
+  const isPublicUrl = url.includes('/auth/login') ||
+                      url.includes('/users/register') ||
+                      url.includes('/auth/refresh')
+  if (!isPublicUrl) {
+    const authStore = useAuthStore()
     if (authStore.token) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
-    ;(config as any)._refreshEpoch = refreshEpoch
-    return config
-  })
-  
-  let isRefreshing = false
-  let refreshEpoch = 0
-  let pendingRequests: Array<{
-    resolve: (token: string) => void
-    reject: (err: unknown) => void
-  }> = []
-
-async function attemptRefresh(
-  currentRefreshToken: string,
-  retries = 1,
-): Promise<string> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await axios.post('/api/auth/refresh', {
-        refreshToken: currentRefreshToken,
-      })
-      return res.data.data.accessToken
-    } catch (err) {
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
-        continue
-      }
-      throw err
-    }
   }
-  throw new Error('refresh failed')
+  ;(config as any)._refreshEpoch = refreshEpoch
+  return config
+})
+
+async function attemptRefresh(refreshToken: string): Promise<string> {
+  try {
+    const res = await axios.post('/api/auth/refresh', {
+      refreshToken,
+    })
+    return res.data.data.accessToken
+  } catch (err) {
+    // Refresh token 401 is unrecoverable, no retry needed
+    throw err
+  }
 }
 
 http.interceptors.response.use(
@@ -76,9 +76,11 @@ http.interceptors.response.use(
     return res
   },
   async (err) => {
-    // 如果是登录请求报错，直接返回，不进入 401 自动跳转逻辑
-    if (err.config?.url?.includes('/auth/login')) {
-      const msg = err.response?.data?.message || '登录失败，请检查账号密码'
+    // 如果是登录/注册等公开接口，直接返回，不进入过期跳转逻辑
+    if (err.config?.url?.includes('/auth/login') || 
+        err.config?.url?.includes('/users/register') ||
+        err.config?.url?.includes('/auth/refresh')) {
+      const msg = err.response?.data?.message || err.message || '请求失败'
       ElMessage.error(msg)
       return Promise.reject(err)
     }
@@ -98,6 +100,7 @@ http.interceptors.response.use(
     if (!authStore.refreshToken) {
       authStore.logout()
       ElMessage.error('登录已过期，请重新登录')
+      const { default: router } = await import('@/router')
       router.push('/login')
       return Promise.reject(err)
     }
@@ -143,6 +146,7 @@ http.interceptors.response.use(
       isRefreshing = false
       authStore.logout()
       ElMessage.error('登录已过期，请重新登录')
+      const { default: router } = await import('@/router')
       router.push('/login')
       return Promise.reject(err)
     } finally {
@@ -150,6 +154,12 @@ http.interceptors.response.use(
     }
   },
 )
+
+// Exposed for auth store to cancel pending 401 refresh requests on manual logout
+export function cancelPendingRequests(reason = '用户已登出') {
+  pendingRequests.forEach(({ reject }) => reject(new Error(reason)))
+  pendingRequests = []
+}
 
 export async function post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
   const res = await http.post<ApiResponse<T>>(url, data)

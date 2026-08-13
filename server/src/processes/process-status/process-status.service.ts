@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { QualityCheck } from '../../quality/quality-check.entity';
 import { BatchingService } from '../batching/batching.service';
 import { CoatingService } from '../coating/coating.service';
 import { RollerPressingService } from '../roller-pressing/roller-pressing.service';
@@ -13,12 +15,16 @@ import { InjectionService } from '../injection/injection.service';
 import { WrappingService } from '../wrapping/wrapping.service';
 import { FormationService } from '../formation/formation.service';
 import { GradingService } from '../grading/grading.service';
+import { ProcessParameter } from '../../process-parameters/process-parameter.entity';
+import { resolveProcessStatus, ResolvedProcessStatus } from './process-status.resolver';
+
+export type ProcessStatusType = ResolvedProcessStatus;
 
 export interface ProcessStatusItem {
   processKey: string;
   processName: string;
   route: string;
-  status: 'not_entered' | 'draft' | 'submitted' | 'voided';
+  status: ProcessStatusType;
   isDraft: boolean | null;
   recordStatus: number | null;
   updatedAt: string | null;
@@ -30,7 +36,7 @@ interface ProcessDef {
   route: string;
   service: {
     findByBatchNo(batchNo: string): Promise<any>;
-  };
+  } | null;
 }
 
 @Injectable()
@@ -39,6 +45,10 @@ export class ProcessStatusService {
 
   constructor(
     private readonly dataSource: DataSource,
+    @InjectRepository(QualityCheck)
+    private readonly qualityCheckRepo: Repository<QualityCheck>,
+    @InjectRepository(ProcessParameter)
+    private readonly processParameterRepo: Repository<ProcessParameter>,
     private readonly batchingService: BatchingService,
     private readonly coatingService: CoatingService,
     private readonly rollerPressingService: RollerPressingService,
@@ -65,75 +75,107 @@ export class ProcessStatusService {
       { key: 'injection', name: '注液', route: 'injection', service: this.injectionService },
       { key: 'wrapping', name: '顶封', route: 'wrapping', service: this.wrappingService },
       { key: 'formation', name: '化成', route: 'formation', service: this.formationService },
+      { key: 'ocv1', name: 'OCV1测试', route: 'ocv1', service: null },
       { key: 'grading', name: '分容', route: 'grading', service: this.gradingService },
+      { key: 'ocv2', name: 'OCV2测试', route: 'ocv2', service: null },
       { key: 'sorting', name: '分选', route: 'sorting', service: this.sortingService },
     ];
   }
 
   async getProcessStatuses(batchNo: string): Promise<ProcessStatusItem[]> {
-    const unionQueries = this.processes.map(proc => {
+    // 用 TRY/CATCH 容错：对每张工序表单独查询，避免不同表列结构不一致导致 UNION 失败
+    const results: any[] = [];
+    for (const proc of this.processes) {
       const tableName = `${proc.key.replace(/-/g, '_')}_record`;
-      return `SELECT '${proc.key}' as processKey, is_draft as isDraft, record_status as recordStatus, updated_at as updatedAt FROM ${tableName} WHERE batch_no = @0`;
-    });
-
-    const fullQuery = unionQueries.join('\nUNION ALL\n');
-    const dbResults: any[] = await this.dataSource.query(fullQuery, [batchNo]);
+      const innerSql = `
+        SELECT TOP 1
+          '${proc.key}' AS processKey,
+          is_draft AS isDraft,
+          record_status AS recordStatus,
+          updated_at AS updatedAt
+        FROM ${tableName} WITH (NOLOCK)
+        WHERE batch_no = @0
+        ORDER BY id DESC
+      `;
+      try {
+        const rows: any[] = await this.dataSource.query(innerSql, [batchNo]);
+        if (rows.length) results.push(rows[0]);
+      } catch (e: any) {
+        // 表不存在或列缺失：记录空结果，标记 null
+        results.push({ processKey: proc.key, isDraft: null, recordStatus: null, updatedAt: null });
+      }
+    }
+    const dbResults = results;
     const recordMap = new Map(dbResults.map(r => [r.processKey, r]));
+    let parameterMap = new Map<string, ProcessParameter>();
+    try {
+      const parameterRecords = await this.processParameterRepo.find({ where: { batchNo } });
+      parameterMap = new Map(parameterRecords.map(record => [record.processCode, record]));
+    } catch (e) {
+      parameterMap = new Map();
+    }
+
+    // 批量查询所有批次的质检记录
+    let qualityMap = new Map<string, { hasAny: boolean; hasFailed: boolean }>();
+    try {
+      const qualityRecords = await this.qualityCheckRepo.find({ where: { batchNo } });
+      qualityMap = new Map(
+        qualityRecords.map(q => [
+          q.processType,
+          { hasAny: true, hasFailed: q.inspectionResult === 2 },
+        ])
+      );
+      // 如果有同一工序多次质检，合并：任一不合格则整体不合格
+      qualityRecords.forEach(q => {
+        const existing = qualityMap.get(q.processType);
+        if (existing && q.inspectionResult === 2) {
+          existing.hasFailed = true;
+        }
+      });
+    } catch (e) {
+      // 如果 quality_check 表不存在或查询失败，忽略质检状态
+    }
 
     return this.processes.map(proc => {
-      const record = recordMap.get(proc.key);
-      let status: ProcessStatusItem['status'] = 'not_entered';
-      let isDraft: boolean | null = null;
-      let recordStatus: number | null = null;
-      let updatedAt: string | null = null;
-
-      if (record) {
-        isDraft = record.isDraft;
-        recordStatus = record.recordStatus;
-        updatedAt = record.updatedAt ? new Date(record.updatedAt).toISOString() : null;
-
-        if (recordStatus === 2) {
-          status = 'voided';
-        } else if (!isDraft) {
-          status = 'submitted';
-        } else {
-          status = 'draft';
-        }
-      }
+      const resolution = resolveProcessStatus(recordMap.get(proc.key), parameterMap.get(proc.key) ?? null, qualityMap.get(proc.key) ?? null);
 
       return {
         processKey: proc.key,
         processName: proc.name,
         route: proc.route,
-        status,
-        isDraft,
-        recordStatus,
-        updatedAt,
+        ...resolution,
       };
     });
   }
 
   async getProcessRecords(batchNo: string): Promise<Record<string, any>> {
-    // 方案一：合并查询。利用 SQL Server 的 FOR JSON PATH 一次性获取所有记录，减少数据库往返次数
+    // 利用 SQL Server 的 FOR JSON PATH 一次性获取所有记录，减少数据库往返次数
+    // 使用 TOP 1 + ORDER BY id DESC 只取最新记录，避免多行导致 WITHOUT_ARRAY_WRAPPER 生成非法 JSON
     const queries = this.processes.map(proc => {
       const tableName = `${proc.key.replace(/-/g, '_')}_record`;
-      // 使用子查询和 FOR JSON PATH 将每一行数据转为 JSON 字符串
-      return `SELECT '${proc.key}' as processKey, (SELECT * FROM ${tableName} WHERE batch_no = @0 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) as data`;
+      return `SELECT '${proc.key}' as processKey, (SELECT TOP 1 * FROM ${tableName} WHERE batch_no = @0 ORDER BY id DESC FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) as data`;
     });
 
     const fullQuery = queries.join('\nUNION ALL\n');
     const dbResults: any[] = await this.dataSource.query(fullQuery, [batchNo]);
-    
+
     const records: Record<string, any> = {};
     for (const row of dbResults) {
       if (row.data) {
-        const rawData = JSON.parse(row.data);
-        records[row.processKey] = this.convertToCamelCase(rawData);
+        try {
+          const rawData = JSON.parse(row.data);
+          // FOR JSON PATH 可能返回数组，取第一条
+          const record = Array.isArray(rawData) ? rawData[0] : rawData;
+          records[row.processKey] = this.convertToCamelCase(record);
+        } catch (e) {
+          console.error(`Failed to parse process record for ${row.processKey}:`, e);
+          records[row.processKey] = null;
+        }
       } else {
         records[row.processKey] = null;
       }
     }
-    
+
     return records;
   }
 

@@ -17,7 +17,11 @@
         <el-table-column prop="action" label="操作类型" width="120" />
         <el-table-column prop="detail" label="操作内容" min-width="200" show-overflow-tooltip />
         <el-table-column prop="ip" label="IP地址" width="140" />
-        <el-table-column prop="createdAt" label="操作时间" width="180" />
+        <el-table-column prop="createdAt" label="操作时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
       </el-table>
       <div class="pagination-wrap">
         <el-pagination
@@ -35,6 +39,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { systemApi } from '@/api/system'
+import { formatDateTime } from '@/composables/datetime'
 import type { LogDto } from '@/types/api'
 
 const modules = ['用户管理', '角色管理', '部门管理', '设备管理', '批次管理', '工序管理', '系统配置', '工序主数据', 'Pack管理']
@@ -54,7 +59,7 @@ async function loadData() {
       module: moduleFilter.value || undefined,
     })
     list.value = res.data.items
-    total.value = res.data.meta?.total ?? 0
+    total.value = res.meta?.total ?? 0
   } catch {
     list.value = []
     total.value = 0

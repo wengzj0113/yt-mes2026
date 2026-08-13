@@ -56,7 +56,9 @@
           <el-input v-model="form.defectReason" type="textarea" :rows="2" placeholder="请输入缺陷原因" />
         </el-form-item>
         <el-form-item label="检验员" prop="inspectorName">
-          <el-input v-model="form.inspectorName" placeholder="请输入检验员姓名" />
+          <el-select v-model="form.inspectorName" placeholder="请选择检验员" style="width: 100%">
+            <el-option v-for="p in qualityPersonnel" :key="p.id" :label="p.realName" :value="p.realName" />
+          </el-select>
         </el-form-item>
         <el-form-item label="异常记录" prop="abnormalRecord">
           <el-input v-model="form.abnormalRecord" type="textarea" :rows="2" placeholder="请输入异常记录（可选）" />
@@ -74,6 +76,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { qualityApi } from '@/api/quality'
+import { masterDataApi } from '@/api/master-data'
+import { formatDateTime } from '@/composables/datetime'
 import type { FormInstance } from 'element-plus'
 
 defineOptions({ name: 'QualityCheckPage' })
@@ -89,6 +93,14 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const formRef = ref<FormInstance>()
+const qualityPersonnel = ref<any[]>([])
+
+async function loadQualityPersonnel() {
+  try {
+    const res = await masterDataApi.qualityPersonnel()
+    qualityPersonnel.value = res.data || []
+  } catch { /* ignore */ }
+}
 
 const processTypeMap: Record<string, string> = {
   batching: '配料',
@@ -119,13 +131,6 @@ const rules = {
   processType: [{ required: true, message: '请选择工序', trigger: 'change' }],
   inspectionResult: [{ required: true, message: '请选择检验结果', trigger: 'change' }],
   inspectorName: [{ required: true, message: '请输入检验员姓名', trigger: 'blur' }],
-}
-
-function formatDateTime(dateStr: string): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 async function loadChecks() {
@@ -177,7 +182,10 @@ async function handleSubmit() {
   }
 }
 
-onMounted(loadChecks)
+onMounted(() => {
+  loadChecks()
+  loadQualityPersonnel()
+})
 
 defineExpose({ form, formRef, handleSubmit })
 </script>
