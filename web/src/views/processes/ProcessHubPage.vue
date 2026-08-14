@@ -79,6 +79,8 @@ import SortingPage from './SortingPage.vue';
 import CasingPage from './CasingPage.vue';
 import IntegratedMachinePage from './IntegratedMachinePage.vue';
 import LaserWeldingPage from './LaserWeldingPage.vue';
+import DynamicProcessPage from './DynamicProcessPage.vue';
+import FormationGradingPage from './FormationGradingPage.vue';
 
 const processComponents: Record<string, any> = {
   'batching': BatchingPage,
@@ -94,6 +96,7 @@ const processComponents: Record<string, any> = {
   'baking': BakingPage,
   'injection': InjectionPage,
   'wrapping': WrappingPage,
+  'formation-grading': FormationGradingPage,
   'formation': FormationPage,
   'grading': GradingPage,
   'ocv1': Ocv1Page,

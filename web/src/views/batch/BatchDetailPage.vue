@@ -120,6 +120,7 @@ import AssemblyPage from '../processes/AssemblyPage.vue'
 import BakingPage from '../processes/BakingPage.vue'
 import InjectionPage from '../processes/InjectionPage.vue'
 import WrappingPage from '../processes/WrappingPage.vue'
+import FormationGradingPage from '../processes/FormationGradingPage.vue'
 import FormationPage from '../processes/FormationPage.vue'
 import GradingPage from '../processes/GradingPage.vue'
 import Ocv1Page from '../processes/Ocv1Page.vue'
@@ -157,6 +158,7 @@ const componentMap: Record<string, any> = {
   'baking': BakingPage,
   'injection': InjectionPage,
   'wrapping': WrappingPage,
+  'formation-grading': FormationGradingPage,
   'formation': FormationPage,
   'grading': GradingPage,
   'ocv1': Ocv1Page,

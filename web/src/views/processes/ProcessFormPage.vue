@@ -1,5 +1,5 @@
 <template>
-  <div class="process-page">
+  <div :class="['process-page', formVariant ? `process-form--${formVariant}` : '']" :data-testid="dataTestid">
     <el-card v-loading="loading">
       <div class="page-header">
         <h3>{{ processName }}</h3>
@@ -12,12 +12,15 @@
 
       <el-divider content-position="left">操作员填写</el-divider>
       <el-form :model="draftForm" label-width="140px" inline @submit.prevent>
-        <el-form-item
-          v-for="f in dynamicDraftFields"
-          :key="f.key"
-          :label="f.label"
-          :required="f.required !== false"
-        >
+        <template v-for="group in renderedDraftGroups" :key="group.key">
+          <el-divider v-if="group.label" content-position="left">{{ group.label }}</el-divider>
+          <div class="field-grid">
+            <el-form-item
+              v-for="f in group.fields"
+              :key="f.key"
+              :label="f.label"
+              :required="f.required !== false"
+            >
           <div class="form-field-wrapper">
             <el-input
               v-if="!f.type || f.type === 'text'"
@@ -73,15 +76,17 @@
             <span v-if="f.type === 'number' && f.unit" class="unit-suffix">{{ f.unit }}</span>
             <span v-if="f.helpText && f.type !== 'range'" class="help-text">{{ f.helpText }}</span>
           </div>
-        </el-form-item>
-        <el-form-item>
+            </el-form-item>
+          </div>
+        </template>
+        <el-form-item class="group-actions">
           <el-button type="primary" :loading="saving" @click="handleSave">
             保存
           </el-button>
         </el-form-item>
       </el-form>
 
-      <template v-if="dynamicQualityFields.length > 0">
+      <template v-if="dynamicQualityFields.length > 0 && props.showQualitySubmit !== false">
         <el-divider content-position="left">质检填写</el-divider>
         <el-form :model="qualityForm" label-width="140px" inline @submit.prevent>
           <el-form-item v-for="f in dynamicQualityFields" :key="f.key" :label="f.label">
@@ -126,6 +131,14 @@
         </el-form>
       </template>
 
+      <el-form v-if="dynamicQualityFields.length === 0 && props.showQualitySubmit !== false" :model="draftForm" inline @submit.prevent>
+        <el-form-item>
+          <el-button type="success" :loading="saving" :disabled="!allDraftFilled" @click="handleSubmit">
+            提交质检
+          </el-button>
+        </el-form-item>
+      </el-form>
+
       <p v-if="error" class="error-msg">{{ error }}</p>
       <p v-if="record?.isDraft === false" class="success-msg">该工序已提交质检完成</p>
     </el-card>
@@ -146,6 +159,10 @@ const props = defineProps<{
   draftFields: FormField[]
   qualityFields: FormField[]
   batchNo?: string
+  showQualitySubmit?: boolean
+  fieldGroups?: Array<{ key: string; label: string; fieldKeys: string[] }>
+  formVariant?: string
+  dataTestid?: string
 }>()
 const authStore = useAuthStore()
 
@@ -156,10 +173,24 @@ const emit = defineEmits<{
 const route = useRoute()
 const router = useRouter()
 const batchNo = computed(() => props.batchNo ?? (route.params.batchNo as string))
+const isDynamicProcess = computed(() => props.basePath.startsWith('process-dynamic/'))
 
 // Dynamic Fields
 const dynamicDraftFields = ref<FormField[]>([...props.draftFields])
-const dynamicQualityFields = ref<FormField[]>([...props.qualityFields])
+const dynamicQualityFields = ref<FormField[]>(isDynamicProcess.value ? [] : [...props.qualityFields])
+const renderedDraftGroups = computed(() => {
+  const fields = dynamicDraftFields.value
+  if (!props.fieldGroups?.length) return [{ key: 'default', label: '', fields }]
+
+  const grouped = props.fieldGroups.map((group) => ({
+    ...group,
+    fields: fields.filter((field) => group.fieldKeys.includes(field.key)),
+  }))
+  const groupedKeys = new Set(props.fieldGroups.flatMap((group) => group.fieldKeys))
+  const remaining = fields.filter((field) => !groupedKeys.has(field.key))
+  if (remaining.length) grouped.push({ key: 'other', label: '其他参数', fieldKeys: [], fields: remaining })
+  return grouped
+})
 
 const { loading, saving, error, record, draftForm, qualityForm, loadRecord, saveDraft, submit } = useProcessForm(
   props.basePath,
@@ -168,6 +199,7 @@ const { loading, saving, error, record, draftForm, qualityForm, loadRecord, save
 )
 
 async function loadDynamicFields() {
+  if (!isDynamicProcess.value) return
   const code = props.basePath.split('/').pop()
   if (!code) return
 
@@ -293,4 +325,11 @@ function goBack() {
 .unit-suffix { margin-left: 8px; color: #909399; font-size: 13px; }
 .range-wrapper { display: flex; align-items: center; gap: 8px; }
 .range-separator { color: #909399; font-weight: 500; }
+.field-grid { display: contents; }
+.group-actions { margin-top: 8px; }
+.process-form--formation-grading .field-grid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 10px 24px; }
+.process-form--formation-grading .group-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+@media (max-width: 900px) {
+  .process-form--formation-grading .field-grid { grid-template-columns: 1fr; }
+}
 </style>

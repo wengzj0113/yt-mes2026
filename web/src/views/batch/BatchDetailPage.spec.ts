@@ -13,6 +13,14 @@ vi.mock('../processes/Ocv2Page.vue', () => ({
   default: defineComponent({ template: '<div class="batch-ocv2-entry">OCV2 drawer</div>' }),
 }))
 
+vi.mock('../processes/DynamicProcessPage.vue', () => ({
+  default: defineComponent({ template: '<div class="batch-formation-grading-entry">formation-grading drawer</div>' }),
+}))
+
+vi.mock('../processes/FormationGradingPage.vue', () => ({
+  default: defineComponent({ template: '<div class="batch-formation-grading-entry">formation-grading drawer</div>' }),
+}))
+
 vi.mock('@/api/batch', () => ({
   batchApi: {
     getByNo: vi.fn().mockResolvedValue({
@@ -23,6 +31,7 @@ vi.mock('@/api/batch', () => ({
       data: [
         { processKey: 'ocv1', processName: 'OCV1', route: 'ocv1', status: 'not_entered', isDraft: false, recordStatus: 0, updatedAt: null },
         { processKey: 'ocv2', processName: 'OCV2', route: 'ocv2', status: 'not_entered', isDraft: false, recordStatus: 0, updatedAt: null },
+        { processKey: 'formation-grading', processName: 'formation-grading', route: 'formation-grading', status: 'not_entered', isDraft: false, recordStatus: 0, updatedAt: null },
         { processKey: 'batching', processName: '配料', route: 'batching', status: 'submitted', isDraft: false, recordStatus: 1, updatedAt: null },
         { processKey: 'coating', processName: '涂布', route: 'coating', status: 'draft', isDraft: true, recordStatus: 1, updatedAt: null },
       ],
@@ -94,6 +103,19 @@ describe('BatchDetailPage', () => {
     await ocv2Card!.trigger('click')
     await flushPromises()
     expect(wrapper.find('.batch-ocv2-entry').exists()).toBe(true)
+  })
+
+  it('opens the combined formation-grading process from the batch detail page', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    const card = wrapper.findAll('.proc-card').find(item => item.text().includes('formation-grading'))
+    expect(card).toBeDefined()
+
+    await card!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.batch-formation-grading-entry').exists()).toBe(true)
   })
 
   it('renders batch status logs', async () => {

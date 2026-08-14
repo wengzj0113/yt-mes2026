@@ -52,6 +52,7 @@ const router = createRouter({
         { path: 'processes/:batchNo/baking', name: 'Baking', component: () => import('@/views/processes/BakingPage.vue') },
         { path: 'processes/:batchNo/injection', name: 'Injection', component: () => import('@/views/processes/InjectionPage.vue') },
         { path: 'processes/:batchNo/wrapping', name: 'Wrapping', component: () => import('@/views/processes/WrappingPage.vue') },
+        { path: 'processes/:batchNo/formation-grading', name: 'FormationGrading', component: () => import('@/views/processes/FormationGradingPage.vue') },
         { path: 'processes/:batchNo/formation', name: 'Formation', component: () => import('@/views/processes/FormationPage.vue') },
         { path: 'processes/:batchNo/grading', name: 'Grading', component: () => import('@/views/processes/GradingPage.vue') },
         { path: 'processes/:batchNo/ocv1', name: 'Ocv1', component: () => import('@/views/processes/Ocv1Page.vue') },
