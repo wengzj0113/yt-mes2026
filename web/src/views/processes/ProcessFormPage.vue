@@ -327,7 +327,15 @@ function goBack() {
 .range-separator { color: #909399; font-weight: 500; }
 .field-grid { display: contents; }
 .group-actions { margin-top: 8px; }
-.process-form--formation-grading .field-grid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 10px 24px; }
+.process-form--formation-grading .el-form { display: block; }
+.process-form--formation-grading .field-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 0; }
+.process-form--formation-grading .el-form-item { display: flex; width: 100%; margin-right: 0; }
+.process-form--formation-grading .el-form-item__content { min-width: 0; flex: 1; }
+.process-form--formation-grading .form-field-wrapper { min-width: 0; }
+.process-form--formation-grading .form-field-wrapper > .el-input,
+.process-form--formation-grading .form-field-wrapper > .el-input-number,
+.process-form--formation-grading .form-field-wrapper > .el-select { width: min(320px, 100%); }
+.process-form--formation-grading .range-wrapper { max-width: 100%; flex-wrap: wrap; }
 .process-form--formation-grading .group-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 @media (max-width: 900px) {
   .process-form--formation-grading .field-grid { grid-template-columns: 1fr; }
