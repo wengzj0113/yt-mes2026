@@ -1,5 +1,6 @@
 import { IsString, MaxLength, IsOptional, IsNumber, IsDateString } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
+import { normalizeDeviceDateTime } from './normalize-device-date-time';
 
 export class SorterUploadDto {
   @IsString() @MaxLength(16) batchNo: string;
@@ -16,5 +17,5 @@ export class SorterUploadDto {
   @IsOptional() @Type(() => Number) @IsNumber() resistance?: number;
   @IsOptional() @Type(() => Number) @IsNumber() kValue?: number;
   @IsOptional() @IsString() @MaxLength(16) grade?: string;
-  @IsOptional() @IsDateString() sortingTime?: string;
+  @IsOptional() @Transform(({ value }) => normalizeDeviceDateTime(value)) @IsDateString() sortingTime?: string;
 }

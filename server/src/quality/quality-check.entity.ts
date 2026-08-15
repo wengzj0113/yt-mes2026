@@ -3,6 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 export const VALID_PROCESS_TYPES = [
   'batching', 'coating', 'roller-pressing', 'slitting', 'electrode',
   'winding', 'assembly', 'baking', 'injection', 'wrapping',
+  'casing', 'integrated-machine', 'laser-welding', 'formation-grading',
   'formation', 'grading', 'sorting',
 ] as const;
 

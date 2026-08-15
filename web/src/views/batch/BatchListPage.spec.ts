@@ -81,5 +81,7 @@ describe('BatchListPage', () => {
     await flushPromises()
 
     expect(masterDataApi.departments).toHaveBeenCalled()
+    expect((wrapper.vm as any).workshopOptions).toHaveLength(1)
+    expect((wrapper.vm as any).workshopOptions[0].label).toBe((wrapper.vm as any).workshopOptions[0].value)
   })
 })

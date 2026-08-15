@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/sorting"
+    basePath="process-dynamic/sorting"
     processName="分选"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

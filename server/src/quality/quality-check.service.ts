@@ -7,6 +7,7 @@ import { BatchStatusLog } from '../batch/batch-status-log.entity';
 import { CreateQualityCheckDto } from './dto/create-quality-check.dto';
 import { QueryQualityDto } from './dto/query-quality.dto';
 import { CellBarcode } from '../cells/cell-barcode.entity';
+import { PROCESS_BASELINE } from '../master-data/process-baseline';
 
 @Injectable()
 export class QualityCheckService {
@@ -147,6 +148,13 @@ export class QualityCheckService {
               AND NOT EXISTS (SELECT 1 FROM quality_check q WHERE q.batch_no = p.batch_no AND q.process_type = '${table}')
               ${batchNoFilter}`;
     });
+    queries.push(`SELECT p.process_code as processType, p.batch_no as batchNo,
+                         JSON_VALUE(p.extra_data, '$.operatorName') as operatorName, p.updated_at as submittedAt
+                  FROM process_dynamic_record p
+                  WHERE p.is_draft = 0 AND p.record_status = 1
+                  AND NOT EXISTS (SELECT 1 FROM quality_check q WHERE q.batch_no = p.batch_no AND q.process_type = p.process_code)
+                  ${batchNo ? `AND p.batch_no LIKE '%${batchNo.replace(/'/g, "''")}%'` : ''}`);
+    for (const item of PROCESS_BASELINE) processNames[item.processCode] = item.processName;
 
     const results: any[] = await this.repo.query(queries.join('\nUNION ALL\n'));
     return results.map(r => ({

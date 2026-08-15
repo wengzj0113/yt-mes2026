@@ -1,8 +1,13 @@
 const fs = require('fs');
 const path = require('path');
-const { PROCESS_BASELINE } = require('../dist/master-data/process-baseline.js');
+const { PROCESS_BASELINE, OCV_PROCESS_FIELDS } = require('../dist/master-data/process-baseline.js');
 
-const baselineJson = JSON.stringify(PROCESS_BASELINE).replace(/'/g, "''");
+const syncDefinitions = [
+  ...PROCESS_BASELINE,
+  { processCode: 'ocv1', processName: 'OCV1测试', sortOrder: 150, isActive: true, fieldDefinitions: OCV_PROCESS_FIELDS },
+  { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 155, isActive: true, fieldDefinitions: OCV_PROCESS_FIELDS },
+];
+const baselineJson = JSON.stringify(syncDefinitions).replace(/'/g, "''");
 const sql = `/*
   云通 MES：Excel 工序原始参数模板同步脚本
   说明：
@@ -75,16 +80,6 @@ DECLARE @Baseline NVARCHAR(MAX) = N'${baselineJson}';
           WHERE ex.process_code = b.processCode
             AND JSON_VALUE(oldField.[value], '$.key') = JSON_VALUE(field.[value], '$.key')
         ) eField
-        UNION ALL
-        SELECT oldField.[value], JSON_VALUE(oldField.[value], '$.key')
-        FROM Existing ex
-        CROSS APPLY OPENJSON(ex.field_definitions) oldField
-        WHERE ex.process_code = b.processCode
-          AND ISNULL(JSON_VALUE(oldField.[value], '$.isSystem'), 'false') <> 'true'
-          AND NOT EXISTS (
-            SELECT 1 FROM OPENJSON(b.fieldDefinitions) baselineField
-            WHERE JSON_VALUE(baselineField.[value], '$.key') = JSON_VALUE(oldField.[value], '$.key')
-          )
       ) mergedField
       ORDER BY mergedField.fieldKey
       FOR XML PATH(N''), TYPE
@@ -106,7 +101,7 @@ WHEN NOT MATCHED THEN INSERT
 
 UPDATE process_dictionary
 SET is_active = 0, updated_at = SYSUTCDATETIME()
-WHERE process_code IN (N'formation', N'grading');
+WHERE process_code IN (N'assembly', N'formation', N'grading');
 
 COMMIT TRANSACTION;
 

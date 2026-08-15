@@ -109,13 +109,11 @@ const processTypeMap: Record<string, string> = {
   slitting: '分切',
   electrode: '制片',
   winding: '卷绕',
-  assembly: '装配',
   baking: '烘烤',
   injection: '注液',
   wrapping: '顶封',
-  formation: '化成',
-  grading: '分容',
-  sorting: '分选',
+  'formation-grading': '化成分容',
+  sorting: '分选出货（OCV3）',
 }
 
 const form = reactive({

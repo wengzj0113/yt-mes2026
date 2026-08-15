@@ -12,6 +12,8 @@ export class DepartmentService {
 
   async findAll(): Promise<Department[]> {
     return this.departmentRepo.find({
+      where: { isActive: true },
+      select: ['id', 'code', 'name', 'isActive'],
       order: { code: 'ASC' },
     });
   }

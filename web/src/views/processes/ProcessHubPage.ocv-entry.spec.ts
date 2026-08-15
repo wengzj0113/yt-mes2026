@@ -17,8 +17,8 @@ vi.mock('./Ocv2Page.vue', () => ({ default: defineComponent({ template: '<div cl
 describe('ProcessHubPage OCV entries', () => {
   it('opens OCV1 and OCV2 entry components from active process cards', async () => {
     mocks.list.mockResolvedValue({ data: { items: [
-      { processCode: 'ocv1', processName: 'OCV1测试', sortOrder: 125, isActive: true },
-      { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 128, isActive: true },
+      { processCode: 'ocv1', processName: 'OCV1测试', sortOrder: 150, isActive: true },
+      { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 155, isActive: true },
     ] } })
     mocks.getByNo.mockResolvedValue({ data: { batchNo: 'BATCH-001', productModel: 'M1', plannedQty: 1 } })
     mocks.getProcessStatus.mockResolvedValue({ data: [] })

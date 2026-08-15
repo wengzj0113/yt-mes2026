@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/winding"
+    basePath="process-dynamic/winding"
     processName="卷绕"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

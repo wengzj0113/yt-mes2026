@@ -142,7 +142,11 @@ export function useProcessForm(
     try {
       // 先保存草稿，确保 draft 实体字段入库（submit DTO 不含这些字段）
       await api.createDraft(batchNo, { ...draftForm, ...qualityForm })
-      const res = await api.submitQuality(batchNo, { ...qualityForm, operatorName: draftForm.operatorName })
+      const res = await api.submitQuality(batchNo, {
+        ...draftForm,
+        ...qualityForm,
+        operatorName: draftForm.operatorName ?? qualityForm.operatorName,
+      })
       record.value = res.data
       return true
     } catch (e: any) {

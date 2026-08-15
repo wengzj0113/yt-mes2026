@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/slitting"
+    basePath="process-dynamic/slitting"
     processName="分切"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

@@ -1,5 +1,6 @@
 import { IsString, MaxLength, IsOptional, IsNumber, IsDateString } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
+import { normalizeDeviceDateTime } from './normalize-device-date-time';
 
 export class Ocv1UploadDto {
   @IsString() @MaxLength(16) batchNo: string;
@@ -7,6 +8,6 @@ export class Ocv1UploadDto {
   @IsOptional() @Type(() => Number) @IsNumber() voltage?: number;
   @IsOptional() @Type(() => Number) @IsNumber() internalResistance?: number;
   @IsOptional() @Type(() => Number) @IsNumber() resistance?: number;
-  @IsOptional() @IsDateString() testTime?: string;
+  @IsOptional() @Transform(({ value }) => normalizeDeviceDateTime(value)) @IsDateString() testTime?: string;
   @IsOptional() @IsString() @MaxLength(64) equipmentCode?: string;
 }

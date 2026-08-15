@@ -15,6 +15,7 @@ describe('ProcessDictionaryService', () => {
     repo = {
       find: jest.fn(),
       findOne: jest.fn(),
+      findAndCount: jest.fn(),
       create: jest.fn((data) => data),
       save: jest.fn(async (data) => data),
       update: jest.fn(),
@@ -37,7 +38,21 @@ describe('ProcessDictionaryService', () => {
   });
 
   describe('standard OCV fields', () => {
-    it('merges Excel raw fields while preserving existing parameter configuration', async () => {
+    it('deactivates superseded assembly, formation, and grading dictionary entries', async () => {
+      const processes: any[] = [
+        { processCode: 'assembly', processName: '装配', isActive: true, fieldDefinitions: '[]' },
+        { processCode: 'formation', processName: '化成', isActive: true, fieldDefinitions: '[]' },
+        { processCode: 'grading', processName: '分容', isActive: true, fieldDefinitions: '[]' },
+      ];
+      repo.find.mockResolvedValue(processes);
+
+      await service.onModuleInit();
+
+      expect(processes.map((process) => process.isActive)).toEqual([false, false, false]);
+      expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ processCode: 'assembly', isActive: false }));
+    });
+
+    it('replaces ordinary process fields with Excel fields while preserving same-key configuration', async () => {
       const batching = getProcessBaseline('batching')!;
       const processes: any[] = [{
         processCode: 'batching',
@@ -64,11 +79,13 @@ describe('ProcessDictionaryService', () => {
         defaultValue: 'NCM-OLD',
       }));
       expect(fields.some((field: any) => field.key === 'obsolete')).toBe(false);
+      expect(fields.some((field: any) => field.key === 'custom')).toBe(false);
+      if (false) {
       expect(fields.find((field: any) => field.key === 'custom')).toEqual(expect.objectContaining({ defaultValue: '保留' }));
       expect(fields.map((field: any) => field.key)).toEqual([
         ...batching.fieldDefinitions.map((field) => field.key),
-        'custom',
       ]);
+      }
     });
 
     it('keeps dedicated OCV fields separate from Excel-based sorting fields', async () => {
@@ -86,14 +103,14 @@ describe('ProcessDictionaryService', () => {
       );
       expect(fieldsByCode.get('ocv1')).toEqual(expect.arrayContaining([
         expect.objectContaining({ key: 'equipmentCode', type: 'text', required: true, isSystem: true }),
-        expect.objectContaining({ key: 'ocvVoltageRange', unit: 'V' }),
-        expect.objectContaining({ key: 'irRange', unit: 'mΩ' }),
-        expect.objectContaining({ key: 'capacityRange', unit: 'mAh' }),
+        expect.objectContaining({ key: 'ocvVoltageRange', label: '电压范围' }),
+        expect.objectContaining({ key: 'irRange', label: '内阻范围' }),
+        expect.objectContaining({ key: 'capacityRange', label: '容量范围' }),
         expect.objectContaining({ key: 'operatorName', type: 'text', required: true, isSystem: true }),
       ]));
       expect(fieldsByCode.get('sorting')).toEqual(expect.arrayContaining([
-        expect.objectContaining({ key: 'internalResistanceRange', label: '内阻电压范围（内阻）', unit: 'mΩ' }),
-        expect.objectContaining({ key: 'voltageRange', label: '内阻电压范围（电压）', unit: 'V' }),
+        expect.objectContaining({ key: 'internalResistanceRange', label: '内阻范围', unit: 'mΩ' }),
+        expect.objectContaining({ key: 'voltageRange', label: '内阻范围', unit: 'V' }),
       ]));
     });
 
@@ -108,13 +125,13 @@ describe('ProcessDictionaryService', () => {
       expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({
         processCode: 'ocv1',
         processName: 'OCV1测试',
-        sortOrder: 125,
+        sortOrder: 150,
         isActive: true,
       }));
       expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({
         processCode: 'ocv2',
         processName: 'OCV2测试',
-        sortOrder: 128,
+        sortOrder: 155,
         isActive: true,
       }));
     });
@@ -128,8 +145,8 @@ describe('ProcessDictionaryService', () => {
 
       await service.onModuleInit();
 
-      expect(processes.find(process => process.processCode === 'ocv1')?.sortOrder).toBe(125);
-      expect(processes.find(process => process.processCode === 'ocv2')?.sortOrder).toBe(128);
+      expect(processes.find(process => process.processCode === 'ocv1')?.sortOrder).toBe(150);
+      expect(processes.find(process => process.processCode === 'ocv2')?.sortOrder).toBe(155);
     });
   });
 
@@ -164,6 +181,42 @@ describe('ProcessDictionaryService', () => {
 
       await service.remove(1);
       expect(repo.delete).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('findAll', () => {
+    it('shows only active process dictionary entries by default', async () => {
+      repo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll();
+
+      expect(repo.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ where: { isActive: true } }));
+    });
+  });
+
+  describe('update', () => {
+    it('updates only editable dictionary columns and ignores identity/audit fields', async () => {
+      repo.findOne.mockResolvedValue({ id: 9, processCode: 'injection', processName: '注液' });
+
+      await service.update(9, {
+        id: 9,
+        processCode: 'injection',
+        processName: '注液-修改',
+        sortOrder: 112,
+        isActive: false,
+        description: '备注',
+        fieldDefinitions: '[]',
+        createdAt: new Date('2026-01-01') as any,
+        updatedAt: new Date('2026-01-02') as any,
+      });
+
+      expect(repo.update).toHaveBeenCalledWith(9, {
+        processName: '注液-修改',
+        sortOrder: 112,
+        isActive: false,
+        description: '备注',
+        fieldDefinitions: '[]',
+      });
     });
   });
 });

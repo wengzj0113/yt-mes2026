@@ -14,4 +14,9 @@ export class ProcessDynamicController {
     const { batchNo, ...data } = body;
     return { data: await this.service.saveDraft(code, batchNo, data, user.sub), message: '参数保存成功' };
   }
+  @Post(':processCode/submit') @Roles(UserRole.OPERATOR, UserRole.QUALITY, UserRole.ADMIN)
+  async submit(@Param('processCode') code: string, @Body() body: { batchNo: string; [key: string]: unknown }, @CurrentUser() user: JwtPayload) {
+    const { batchNo, ...data } = body;
+    return { data: await this.service.submit(code, batchNo, data, user.sub), message: '工序参数提交成功' };
+  }
 }

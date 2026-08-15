@@ -12,6 +12,7 @@ const mockCellTrace = vi.hoisted(() => ({
       voltage: 3.7,
       internalResistance: 18,
       capacity: 2500,
+      kValue: 12.3456,
       grade: 'A',
       importSource: '产线1',
       importedAt: '2026-01-01T10:00:00',
@@ -144,6 +145,7 @@ describe('CellTracePage', () => {
     expect(cellApi.trace).toHaveBeenCalled()
     expect(wrapper.text()).toContain('SN: CELL001')
     expect(wrapper.text()).toContain('所属批次: WT26A01MA')
+    expect(wrapper.text()).toContain('mV/天')
   })
 
   it('traces by batch and shows cell list', async () => {
@@ -162,4 +164,3 @@ describe('CellTracePage', () => {
     expect(wrapper.text()).toContain('CELL001')
   })
 })
-

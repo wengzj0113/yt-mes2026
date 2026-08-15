@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/electrode"
+    basePath="process-dynamic/electrode"
     processName="制片"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

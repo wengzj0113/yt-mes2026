@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/roller-pressing"
+    basePath="process-dynamic/roller-pressing"
     processName="辊压"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

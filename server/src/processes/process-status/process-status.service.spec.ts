@@ -188,11 +188,12 @@ describe('ProcessStatusService', () => {
 
     const result = await service.getProcessStatuses('BATCH001');
     const keys = result.map((r) => r.processKey);
+    expect(keys).not.toContain('assembly');
 
     expect(keys).toEqual([
       'batching', 'coating', 'roller-pressing', 'slitting',
-      'electrode', 'winding', 'assembly', 'casing', 'integrated-machine',
-      'laser-welding', 'baking', 'injection', 'wrapping', 'ocv1', 'ocv2', 'sorting',
+      'electrode', 'winding', 'casing', 'integrated-machine',
+      'laser-welding', 'baking', 'injection', 'wrapping', 'formation-grading', 'ocv1', 'ocv2', 'sorting',
     ]);
   });
 
@@ -204,7 +205,7 @@ describe('ProcessStatusService', () => {
     await service.getProcessStatuses('TEST_BATCH');
 
     Object.values(mockServices).forEach((mock: any) => {
-      if (mockServices.BatchingService === mock || mockServices.CoatingService === mock || mockServices.RollerPressingService === mock || mockServices.SlittingService === mock || mockServices.SortingService === mock || mockServices.ElectrodeService === mock || mockServices.WindingService === mock || mockServices.AssemblyService === mock || mockServices.BakingService === mock || mockServices.InjectionService === mock || mockServices.WrappingService === mock) expect(mock.findByBatchNo).toHaveBeenCalledWith('TEST_BATCH');
+      if (mockServices.BatchingService === mock || mockServices.CoatingService === mock || mockServices.RollerPressingService === mock || mockServices.SlittingService === mock || mockServices.SortingService === mock || mockServices.ElectrodeService === mock || mockServices.WindingService === mock || mockServices.BakingService === mock || mockServices.InjectionService === mock || mockServices.WrappingService === mock) expect(mock.findByBatchNo).toHaveBeenCalledWith('TEST_BATCH');
     });
   });
 

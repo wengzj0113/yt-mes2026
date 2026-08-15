@@ -16,7 +16,7 @@ export class ProcessDictionaryController {
   }
 
   @Get('code/:code')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.OPERATOR, UserRole.QUALITY, UserRole.ADMIN)
   async findByCode(@Param('code') code: string) {
     const data = await this.processDictionaryService.findByCode(code);
     return { success: true, data };

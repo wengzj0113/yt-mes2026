@@ -10,7 +10,7 @@ vi.mock('@/stores/auth', () => ({
 vi.mock('./ProcessFormPage.vue', () => ({
   default: defineComponent({
     name: 'ProcessFormPageStub',
-    props: ['basePath', 'processName', 'draftFields', 'qualityFields', 'batchNo'],
+    props: ['basePath', 'processName', 'draftFields', 'qualityFields', 'batchNo', 'showQualitySubmit'],
     template: '<div data-testid="process-form-stub" />',
   }),
 }))
@@ -27,6 +27,7 @@ describe('OcvParameterPage', () => {
     expect(form.props('processName')).toBe(`${processName} - 参数编辑`)
     expect(form.props('batchNo')).toBe('B1')
     expect(form.props('qualityFields')).toEqual([])
+    expect(form.props('showQualitySubmit')).toBe(false)
     expect(form.props('draftFields').map((field: { key: string }) => field.key)).toEqual([
       'equipmentCode',
       'ocvVoltageRange',

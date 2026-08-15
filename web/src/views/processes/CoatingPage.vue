@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/coating"
+    basePath="process-dynamic/coating"
     processName="涂布"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

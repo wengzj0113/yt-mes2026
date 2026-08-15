@@ -128,7 +128,7 @@
             <div class="kpi-item__lab">放电容量</div>
           </div>
           <div v-if="mode === 'barcode' && result" class="kpi-item">
-            <div class="kpi-item__val">{{ formatKValue(result.cell.kValue) }}</div>
+            <div class="kpi-item__val">{{ formatKValue(result.cell.kValue) }}<small>mV/天</small></div>
             <div class="kpi-item__lab">K值</div>
           </div>
           <!-- Batch Mode KPI -->

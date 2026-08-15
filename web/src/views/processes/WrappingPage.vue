@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/wrapping"
+    basePath="process-dynamic/wrapping"
     processName="顶封"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

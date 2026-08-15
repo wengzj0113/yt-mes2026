@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/baking"
+    basePath="process-dynamic/baking"
     processName="烘烤"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

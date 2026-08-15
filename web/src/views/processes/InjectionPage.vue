@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/injection"
+    basePath="process-dynamic/injection"
     processName="注液"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

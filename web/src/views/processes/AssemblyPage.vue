@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/assembly"
+    basePath="process-dynamic/assembly"
     processName="装配"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

@@ -1,6 +1,6 @@
 <template>
   <ProcessFormPage
-    basePath="processes/batching"
+    basePath="process-dynamic/batching"
     processName="配料"
     :draftFields="draftFields"
     :qualityFields="qualityFields"

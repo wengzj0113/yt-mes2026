@@ -217,7 +217,7 @@ const total = ref(0);
 
 const searchForm = ref({
   keyword: '',
-  isActive: '',
+  isActive: 'true',
   page: 1,
   pageSize: 20
 });

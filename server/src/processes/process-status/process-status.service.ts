@@ -17,6 +17,7 @@ import { InjectionService } from '../injection/injection.service';
 import { WrappingService } from '../wrapping/wrapping.service';
 import { FormationService } from '../formation/formation.service';
 import { GradingService } from '../grading/grading.service';
+import { PROCESS_BASELINE } from '../../master-data/process-baseline';
 
 export type ProcessStatusType = ResolvedProcessStatus;
 export interface ProcessStatusItem { processKey: string; processName: string; route: string; status: ProcessStatusType; isDraft: boolean | null; recordStatus: number | null; updatedAt: string | null; }
@@ -25,7 +26,7 @@ interface ProcessDef { key: string; name: string; route: string; service?: { fin
 @Injectable()
 export class ProcessStatusService {
   private readonly processes: ProcessDef[] = [
-    ['batching', '配料'], ['coating', '涂布'], ['roller-pressing', '辊压'], ['slitting', '分切'], ['electrode', '制片'], ['winding', '卷绕'], ['assembly', '装配'], ['casing', '入壳'], ['integrated-machine', '一体机'], ['laser-welding', '激光焊接'], ['baking', '烘烤'], ['injection', '注液'], ['wrapping', '封口'], ['ocv1', 'OCV1测试'], ['ocv2', 'OCV2测试'], ['sorting', '分选'],
+    ['batching', '配料'], ['coating', '涂布'], ['roller-pressing', '辊压'], ['slitting', '分切'], ['electrode', '制片'], ['winding', '卷绕'], ['casing', '入壳'], ['integrated-machine', '一体机'], ['laser-welding', '激光焊接'], ['baking', '烘烤'], ['injection', '注液'], ['wrapping', '封口'], ['formation-grading', '化成分容'], ['ocv1', 'OCV1测试'], ['ocv2', 'OCV2测试'], ['sorting', '分选出货（OCV3）'],
   ].map(([key, name]) => ({ key, name, route: key }));
 
   constructor(private readonly dataSource: DataSource, @InjectRepository(QualityCheck) private readonly qualityCheckRepo: Repository<QualityCheck>, @InjectRepository(ProcessParameter) private readonly processParameterRepo: Repository<ProcessParameter>, private readonly batchingService: BatchingService, private readonly coatingService: CoatingService, private readonly rollerPressingService: RollerPressingService, private readonly slittingService: SlittingService, private readonly sortingService: SortingService, private readonly electrodeService: ElectrodeService, private readonly windingService: WindingService, private readonly assemblyService: AssemblyService, private readonly bakingService: BakingService, private readonly injectionService: InjectionService, private readonly wrappingService: WrappingService, private readonly formationService: FormationService, private readonly gradingService: GradingService) {
@@ -36,7 +37,12 @@ export class ProcessStatusService {
   async getProcessStatuses(batchNo: string): Promise<ProcessStatusItem[]> {
     const results: any[] = [];
     for (const proc of this.processes) {
-      const dynamic = ['casing', 'integrated-machine', 'laser-welding'].includes(proc.key);
+      const dynamic = PROCESS_BASELINE.some((item) => item.processCode === proc.key);
+      if (dynamic) {
+        const rows = await this.findDynamicRecord(proc.key, batchNo);
+        if (rows) { results.push(rows); continue; }
+        if (!proc.service) continue;
+      }
       if (proc.service) {
         const record = await proc.service.findByBatchNo(batchNo).catch(() => null);
         if (record) results.push({ processKey: proc.key, isDraft: record.isDraft, recordStatus: record.recordStatus, updatedAt: record.updatedAt });
@@ -64,7 +70,12 @@ export class ProcessStatusService {
   async getProcessRecords(batchNo: string): Promise<Record<string, any>> {
     const records: Record<string, any> = {};
     for (const proc of this.processes) {
-      const dynamic = ['casing', 'integrated-machine', 'laser-welding'].includes(proc.key);
+      const dynamic = PROCESS_BASELINE.some((item) => item.processCode === proc.key);
+      if (dynamic) {
+        const dynamicRecord = await this.findDynamicFullRecord(proc.key, batchNo);
+        if (dynamicRecord) { records[proc.key] = dynamicRecord; continue; }
+        if (!proc.service) { records[proc.key] = null; continue; }
+      }
       if (proc.service) { records[proc.key] = await proc.service.findByBatchNo(batchNo).catch(() => null); continue; }
       const table = dynamic ? 'process_dynamic_record' : `${proc.key.replace(/-/g, '_')}_record`;
       const filter = dynamic ? ` AND process_code = '${proc.key}'` : '';
@@ -78,6 +89,24 @@ export class ProcessStatusService {
       } catch { records[proc.key] = null; }
     }
     return records;
+  }
+
+  private async findDynamicRecord(processCode: string, batchNo: string) {
+    try {
+      const rows = await this.dataSource.query(`SELECT TOP 1 '${processCode}' AS processKey, is_draft AS isDraft, record_status AS recordStatus, updated_at AS updatedAt FROM process_dynamic_record WITH (NOLOCK) WHERE batch_no = @0 AND process_code = @1 ORDER BY id DESC`, [batchNo, processCode]);
+      return rows[0] ?? null;
+    } catch { return null; }
+  }
+
+  private async findDynamicFullRecord(processCode: string, batchNo: string) {
+    try {
+      const rows = await this.dataSource.query(`SELECT TOP 1 * FROM process_dynamic_record WITH (NOLOCK) WHERE batch_no = @0 AND process_code = @1 ORDER BY id DESC`, [batchNo, processCode]);
+      const row = rows[0];
+      if (!row) return null;
+      if (row.extra_data) Object.assign(row, JSON.parse(row.extra_data));
+      delete row.extra_data;
+      return this.convertToCamelCase(row);
+    } catch { return null; }
   }
 
   private convertToCamelCase(obj: any): any { if (Array.isArray(obj)) return obj.map((value) => this.convertToCamelCase(value)); if (obj && obj.constructor === Object) return Object.keys(obj).reduce((result, key) => { result[key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())] = this.convertToCamelCase(obj[key]); return result; }, {} as any); return obj; }

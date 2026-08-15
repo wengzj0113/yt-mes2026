@@ -185,9 +185,9 @@ const processOptions = [
   { label: '配料', value: 'batching' }, { label: '涂布', value: 'coating' },
   { label: '辊压', value: 'roller-pressing' }, { label: '分切', value: 'slitting' },
   { label: '制片', value: 'electrode' }, { label: '卷绕', value: 'winding' },
-  { label: '装配', value: 'assembly' }, { label: '烘烤', value: 'baking' },
+  { label: '烘烤', value: 'baking' },
   { label: '注液', value: 'injection' }, { label: '顶封', value: 'wrapping' },
-  { label: '化成', value: 'formation' }, { label: '分容', value: 'grading' }, { label: '分选', value: 'sorting' },
+  { label: '化成分容', value: 'formation-grading' }, { label: '分选出货（OCV3）', value: 'sorting' },
 ]
 
 const processLabel = (key: string) => processOptions.find(p => p.value === key)?.label || key

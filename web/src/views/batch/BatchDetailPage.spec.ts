@@ -42,7 +42,25 @@ vi.mock('@/api/batch', () => ({
 
 vi.mock('@/api/cells', () => ({
   cellApi: {
-    findByBatch: vi.fn().mockResolvedValue({ data: [], meta: { total: 0 } }),
+    findByBatch: vi.fn().mockResolvedValue({
+      data: [{
+        barcode: 'CELL001',
+        voltage: 3.96,
+        internalResistance: 16.5,
+        capacity: '2000-2020',
+        grade: 'A',
+        importedAt: '2026-08-15T10:00:00Z',
+        ocv1Voltage: 3.965,
+        ocv1Resistance: 17.2,
+        ocv1Time: '2026-08-14T09:00:00Z',
+        ocv2Voltage: 3.964,
+        ocv2Resistance: 16.8,
+        ocv2Time: '2026-08-15T09:00:00Z',
+        kValue: 0.1392,
+        sortingTime: '2026-08-15T10:00:00Z',
+      }],
+      meta: { total: 1 },
+    }),
   },
 }))
 
@@ -76,6 +94,31 @@ describe('BatchDetailPage', () => {
     await flushPromises()
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('WT26A01MA')
+  })
+
+  it('shows OCV1, OCV2, and sorting data together without equipment columns', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    const cellsTab = wrapper.findAll('.el-tabs__item').find(tab => tab.text().includes('电芯列表'))
+    expect(cellsTab).toBeDefined()
+    await cellsTab!.trigger('click')
+    await flushPromises()
+
+    const text = wrapper.text()
+    expect(text).toContain('OCV1')
+    expect(text).toContain('OCV2')
+    expect(text).toContain('分选')
+    expect(text).toContain('电压(V)')
+    expect(text).toContain('内阻(mΩ)')
+    expect(text).toContain('K值(mV/天)')
+    expect(text).toContain('容量(mAh)')
+    expect(text).toContain('等级')
+    expect(text).toContain('分选时间')
+    expect(text).toContain('3.965')
+    expect(text).toContain('0.1392')
+    expect(text).not.toContain('OCV1设备编号')
+    expect(text).not.toContain('OCV2设备编号')
   })
 
   it('shows process navigation', async () => {

@@ -5,6 +5,7 @@
     :draft-fields="parameterFields"
     :quality-fields="[]"
     :batch-no="batchNo"
+    :show-quality-submit="false"
     @close="emit('close')"
   />
 </template>

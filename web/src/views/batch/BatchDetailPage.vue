@@ -33,16 +33,48 @@
             <el-button type="primary" size="small" @click="goImportBarcode">导入电芯</el-button>
             <span class="cell-count" v-if="cellTotal > 0">共 {{ cellTotal }} 个电芯</span>
           </div>
-          <el-table :data="cellList" v-loading="cellLoading" stripe empty-text="暂未导入电芯">
+          <el-table class="cell-table" :data="cellList" v-loading="cellLoading" stripe empty-text="暂未导入电芯">
             <el-table-column prop="barcode" label="电芯码" min-width="160" />
-            <el-table-column prop="voltage" label="电压(V)" width="100">
-              <template #default="{ row }">{{ row.voltage?.toFixed(3) }}</template>
+            <el-table-column label="OCV1">
+              <el-table-column prop="ocv1Voltage" label="电压(V)" width="105">
+                <template #default="{ row }">{{ formatCellNumber(row.ocv1Voltage, 3) }}</template>
+              </el-table-column>
+              <el-table-column prop="ocv1Resistance" label="内阻(mΩ)" width="110">
+                <template #default="{ row }">{{ formatCellNumber(row.ocv1Resistance, 2) }}</template>
+              </el-table-column>
+              <el-table-column prop="ocv1Time" label="测试时间" width="170">
+                <template #default="{ row }">{{ formatCellTime(row.ocv1Time) }}</template>
+              </el-table-column>
             </el-table-column>
-            <el-table-column prop="internalResistance" label="内阻(mΩ)" width="100" />
-            <el-table-column prop="capacity" label="容量(mAh)" width="100" />
-            <el-table-column prop="grade" label="等级" width="80" />
+            <el-table-column label="OCV2">
+              <el-table-column prop="ocv2Voltage" label="电压(V)" width="105">
+                <template #default="{ row }">{{ formatCellNumber(row.ocv2Voltage, 3) }}</template>
+              </el-table-column>
+              <el-table-column prop="ocv2Resistance" label="内阻(mΩ)" width="110">
+                <template #default="{ row }">{{ formatCellNumber(row.ocv2Resistance, 2) }}</template>
+              </el-table-column>
+              <el-table-column prop="kValue" label="K值(mV/天)" width="125">
+                <template #default="{ row }">{{ formatCellNumber(row.kValue, 4) }}</template>
+              </el-table-column>
+              <el-table-column prop="ocv2Time" label="测试时间" width="170">
+                <template #default="{ row }">{{ formatCellTime(row.ocv2Time) }}</template>
+              </el-table-column>
+            </el-table-column>
+            <el-table-column label="分选">
+              <el-table-column prop="voltage" label="电压(V)" width="105">
+                <template #default="{ row }">{{ formatCellNumber(row.voltage, 3) }}</template>
+              </el-table-column>
+              <el-table-column prop="internalResistance" label="内阻(mΩ)" width="110">
+                <template #default="{ row }">{{ formatCellNumber(row.internalResistance, 2) }}</template>
+              </el-table-column>
+              <el-table-column prop="capacity" label="容量(mAh)" width="110" />
+              <el-table-column prop="grade" label="等级" width="80" />
+              <el-table-column prop="sortingTime" label="分选时间" width="170">
+                <template #default="{ row }">{{ formatCellTime(row.sortingTime) }}</template>
+              </el-table-column>
+            </el-table-column>
             <el-table-column prop="importedAt" label="导入时间" width="180" />
-            <el-table-column label="操作" width="100">
+            <el-table-column label="操作" width="100" fixed="right">
               <template #default="{ row }">
                 <el-link type="primary" @click="goCellTrace(row.barcode)">追溯</el-link>
               </template>
@@ -203,6 +235,16 @@ function statusText(status: string): string {
 
 function formatTime(dateStr: string): string {
   return formatDateTime(dateStr)
+}
+
+function formatCellNumber(value: number | null | undefined, fractionDigits: number): string {
+  return value === null || value === undefined || Number.isNaN(Number(value))
+    ? '-'
+    : Number(value).toFixed(fractionDigits)
+}
+
+function formatCellTime(value: string | null | undefined): string {
+  return value ? formatTime(value) : '-'
 }
 
 function navigate(path: string, name?: string) {

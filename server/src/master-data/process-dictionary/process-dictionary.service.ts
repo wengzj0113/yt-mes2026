@@ -28,7 +28,7 @@ export class ProcessDictionaryService implements OnModuleInit {
         await this.processDictRepo.save(existing);
       }
     }
-    for (const legacyCode of ['formation', 'grading']) {
+    for (const legacyCode of ['assembly', 'formation', 'grading']) {
       const legacy = byCode.get(legacyCode);
       if (legacy?.isActive) {
         legacy.isActive = false;
@@ -36,8 +36,8 @@ export class ProcessDictionaryService implements OnModuleInit {
       }
     }
     for (const definition of [
-      { processCode: 'ocv1', processName: 'OCV1测试', sortOrder: 125, isActive: true },
-      { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 128, isActive: true },
+      { processCode: 'ocv1', processName: 'OCV1测试', sortOrder: 150, isActive: true },
+      { processCode: 'ocv2', processName: 'OCV2测试', sortOrder: 155, isActive: true },
     ]) {
       const existing = byCode.get(definition.processCode);
       const fieldDefinitions = JSON.stringify(mergeFieldDefinitionsWithBaseline(existing?.fieldDefinitions, OCV_PROCESS_FIELDS));
@@ -47,7 +47,7 @@ export class ProcessDictionaryService implements OnModuleInit {
   }
 
   async findAll(query?: { keyword?: string; isActive?: string; page?: number; pageSize?: number }) {
-    const where: any = {};
+    const where: any = { isActive: true };
     if (query?.keyword) where.processName = Like(`%${query.keyword}%`);
     if (query?.isActive !== undefined && query?.isActive !== '') where.isActive = query.isActive === 'true';
     const page = query?.page ? Number(query.page) : 1;
@@ -64,7 +64,16 @@ export class ProcessDictionaryService implements OnModuleInit {
 
   async findByCode(processCode: string): Promise<ProcessDictionary | null> { return this.processDictRepo.findOne({ where: { processCode } }); }
   async create(data: Partial<ProcessDictionary>): Promise<ProcessDictionary> { return this.processDictRepo.save(this.processDictRepo.create(data)); }
-  async update(id: number, data: Partial<ProcessDictionary>): Promise<ProcessDictionary> { await this.processDictRepo.update(id, data); return this.findOne(id); }
+  async update(id: number, data: Partial<ProcessDictionary>): Promise<ProcessDictionary> {
+    const editableFields: Array<keyof ProcessDictionary> = ['processName', 'sortOrder', 'isActive', 'description', 'fieldDefinitions'];
+    const updateData = Object.fromEntries(
+      editableFields
+        .filter((field) => data[field] !== undefined)
+        .map((field) => [field, data[field]]),
+    );
+    await this.processDictRepo.update(id, updateData);
+    return this.findOne(id);
+  }
 
   async remove(id: number): Promise<void> {
     const process = await this.findOne(id);

@@ -33,6 +33,7 @@ export interface CellBarcodeRecord {
   ocv2Resistance?: number | null
   ocv2Time?: string | null
   ocv2EquipmentCode?: string | null
+  sortingTime?: string | null
 }
 
 export interface CellTraceResult {

@@ -202,6 +202,7 @@ function openCreate() {
   editingBatchNo.value = ''
   resetForm()
   showDialog.value = true
+  loadMasterData()
 }
 
 function openEdit(row: BatchDto) {

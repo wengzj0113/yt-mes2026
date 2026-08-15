@@ -23,4 +23,27 @@ describe('AlignProcessDictionaryWithExcel migration', () => {
     expect(batchingStatement).toContain('NCM-OLD');
     expect(statements.some((sql) => sql.includes("process_code = 'casing'"))).toBe(true);
   });
+
+  it('does not generate obsolete ordinary fields from the existing dictionary', async () => {
+    const queryRunner = {
+      query: jest.fn()
+        .mockResolvedValueOnce([{
+          process_code: 'batching',
+          field_definitions: JSON.stringify([
+            { key: 'positiveActiveMaterial', label: '正极活性材料', type: 'text' },
+            { key: 'equipmentCode', label: '旧设备编号', type: 'text', isSystem: true },
+            { key: 'OP', label: '旧操作员', type: 'text' },
+          ]),
+        }])
+        .mockResolvedValue([]),
+    } as any;
+
+    await new AlignProcessDictionaryWithExcel1781860000000().up(queryRunner);
+
+    const batchingStatement = queryRunner.query.mock.calls
+      .map(([sql]: [string]) => sql)
+      .find((sql: string) => sql.includes("process_code = 'batching'"));
+    expect(batchingStatement).not.toContain('equipmentCode');
+    expect(batchingStatement).not.toContain('旧操作员');
+  });
 });
