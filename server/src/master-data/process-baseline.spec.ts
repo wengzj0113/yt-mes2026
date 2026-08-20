@@ -1,4 +1,4 @@
-import { OCV_PROCESS_FIELDS, PROCESS_BASELINE, getProcessBaseline } from './process-baseline';
+import { hasIncompatibleFieldDefinitions, OCV_PROCESS_FIELDS, PROCESS_BASELINE, getProcessBaseline } from './process-baseline';
 
 describe('Excel process parameter baseline', () => {
   it('excludes superseded assembly from the active baseline', () => {
@@ -42,6 +42,18 @@ describe('Excel process parameter baseline', () => {
       const keys = process.fieldDefinitions.map((field) => field.key);
       expect(new Set(keys).size).toBe(keys.length);
     }
+  });
+
+  it('accepts a valid range configuration for an ordinary process field', () => {
+    const roller = getProcessBaseline('roller-pressing')!;
+    const fields = [{
+      ...roller.fieldDefinitions[0],
+      type: 'range',
+      minKey: 'positiveRollerThicknessMin',
+      maxKey: 'positiveRollerThicknessMax',
+    }];
+
+    expect(hasIncompatibleFieldDefinitions(JSON.stringify(fields), roller.fieldDefinitions)).toBe(false);
   });
 
   it('matches the 260814X process structure', () => {

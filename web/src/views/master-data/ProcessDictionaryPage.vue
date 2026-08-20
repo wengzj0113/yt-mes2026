@@ -131,7 +131,7 @@
         </el-table-column>
         <el-table-column label="类型" width="110">
           <template #default="{ row }">
-            <el-select v-model="row.type">
+            <el-select v-model="row.type" @change="handleFieldTypeChange(row)">
               <el-option
                 v-for="option in FIELD_TYPE_OPTIONS"
                 :key="option.value"
@@ -333,6 +333,14 @@ function handleAddField() {
   });
 }
 
+function handleFieldTypeChange(field: any) {
+  if (field.type !== 'range') return;
+  const key = (field.key ?? '').trim();
+  if (!key) return;
+  if (!field.minKey) field.minKey = `${key}Min`;
+  if (!field.maxKey) field.maxKey = `${key}Max`;
+}
+
 async function submitConfig() {
   if (!currentProcess.value?.id) return;
 
@@ -354,6 +362,23 @@ async function submitConfig() {
   const dupIndex = keys.findIndex((k, i) => keys.indexOf(k) !== i);
   if (dupIndex !== -1) {
     return ElMessage.warning(`第 ${dupIndex + 1} 行的参数 Key 与其他行重复，请修改后再保存`);
+  }
+
+  // 范围字段的两个端点也是实际表单状态 key，不能为空、相同或被多个范围字段复用。
+  const rangeKeys = new Set<string>();
+  for (let index = 0; index < configFields.value.length; index += 1) {
+    const field = configFields.value[index];
+    if (field.type !== 'range') continue;
+    const minKey = (field.minKey ?? '').trim();
+    const maxKey = (field.maxKey ?? '').trim();
+    if (!minKey || !maxKey) {
+      return ElMessage.warning(`第 ${index + 1} 行：范围参数必须填写最小值 Key 和最大值 Key`);
+    }
+    if (minKey === maxKey || rangeKeys.has(minKey) || rangeKeys.has(maxKey)) {
+      return ElMessage.warning(`第 ${index + 1} 行：范围参数的最小值/最大值 Key 不能与其他范围参数重复或相同`);
+    }
+    rangeKeys.add(minKey);
+    rangeKeys.add(maxKey);
   }
 
   submitLoading.value = true;

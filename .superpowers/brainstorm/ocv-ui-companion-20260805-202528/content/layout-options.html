@@ -1,0 +1,276 @@
+<style>
+  #ocv-layout-options {
+    --ocv-ink: #233044;
+    --ocv-muted: #718096;
+    --ocv-line: #d9e1eb;
+    --ocv-surface: #ffffff;
+    --ocv-soft: #f5f8fb;
+    --ocv-blue: #2f6fed;
+    --ocv-green: #2f9e72;
+    color: var(--ocv-ink);
+    font-family: Inter, "Microsoft YaHei", sans-serif;
+  }
+  #ocv-layout-options .ocv-intro {
+    margin-bottom: 18px;
+  }
+  #ocv-layout-options .ocv-intro h2 {
+    margin-bottom: 6px;
+  }
+  #ocv-layout-options .ocv-intro p {
+    color: var(--ocv-muted);
+    margin: 0;
+  }
+  #ocv-layout-options .ocv-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  #ocv-layout-options .ocv-option {
+    border: 1px solid var(--ocv-line);
+    border-radius: 8px;
+    background: var(--ocv-surface);
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+  #ocv-layout-options .ocv-option:hover {
+    border-color: #9db8ed;
+    box-shadow: 0 6px 18px rgba(36, 65, 102, 0.12);
+    transform: translateY(-2px);
+  }
+  #ocv-layout-options .ocv-option h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+  #ocv-layout-options .ocv-option > p {
+    color: var(--ocv-muted);
+    font-size: 12px;
+    line-height: 1.45;
+    min-height: 34px;
+    margin: 0 0 10px;
+  }
+  #ocv-layout-options .ocv-window {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f8fafc;
+    min-height: 310px;
+  }
+  #ocv-layout-options .ocv-window-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 9px;
+    color: #526174;
+    background: #edf2f7;
+    border-bottom: 1px solid #dbe3ec;
+    font-size: 11px;
+  }
+  #ocv-layout-options .ocv-window-body {
+    padding: 10px;
+  }
+  #ocv-layout-options .ocv-title-row,
+  #ocv-layout-options .ocv-toolbar,
+  #ocv-layout-options .ocv-field-row,
+  #ocv-layout-options .ocv-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  #ocv-layout-options .ocv-title-row {
+    justify-content: space-between;
+    margin-bottom: 9px;
+  }
+  #ocv-layout-options .ocv-title-row strong {
+    font-size: 13px;
+  }
+  #ocv-layout-options .ocv-tabs {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 10px;
+  }
+  #ocv-layout-options .ocv-tabs span,
+  #ocv-layout-options .ocv-chip {
+    padding: 4px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #66758a;
+    background: #e9eef5;
+  }
+  #ocv-layout-options .ocv-tabs .active,
+  #ocv-layout-options .ocv-chip.active {
+    color: #1d57bf;
+    background: #e5efff;
+  }
+  #ocv-layout-options .ocv-field {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 8px;
+  }
+  #ocv-layout-options .ocv-field label {
+    display: block;
+    margin-bottom: 3px;
+    color: #68778a;
+    font-size: 10px;
+  }
+  #ocv-layout-options .ocv-input {
+    height: 25px;
+    padding: 4px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    background: #fff;
+    color: #354256;
+    font-size: 10px;
+  }
+  #ocv-layout-options .ocv-button {
+    border: 0;
+    border-radius: 3px;
+    padding: 5px 8px;
+    color: #fff;
+    background: var(--ocv-blue);
+    font-size: 10px;
+  }
+  #ocv-layout-options .ocv-button.secondary {
+    color: #4b5b70;
+    background: #e9eef5;
+  }
+  #ocv-layout-options .ocv-note {
+    margin-top: 9px;
+    padding: 7px;
+    border-left: 3px solid #9db8ed;
+    background: #f2f6fc;
+    color: #68778a;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  #ocv-layout-options .ocv-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 9px;
+    background: #fff;
+  }
+  #ocv-layout-options .ocv-table th,
+  #ocv-layout-options .ocv-table td {
+    padding: 5px 4px;
+    border-bottom: 1px solid #e5eaf0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #ocv-layout-options .ocv-table th {
+    color: #718096;
+    background: #f3f6f9;
+    font-weight: 500;
+  }
+  #ocv-layout-options .ocv-status {
+    color: var(--ocv-green);
+  }
+  #ocv-layout-options .ocv-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 11px;
+    color: var(--ocv-muted);
+    font-size: 11px;
+  }
+  #ocv-layout-options .ocv-footer strong {
+    color: var(--ocv-ink);
+    font-weight: 500;
+  }
+  @media (max-width: 900px) {
+    #ocv-layout-options .ocv-options {
+      grid-template-columns: 1fr;
+    }
+    #ocv-layout-options .ocv-window {
+      min-height: auto;
+    }
+  }
+</style>
+
+<div id="ocv-layout-options">
+  <div class="ocv-intro">
+    <h2>OCV1 / OCV2 录入界面布局</h2>
+    <p>点击一个方案，选择你希望采用的基础操作方式。字段按 OCV1 与 OCV2 的差异显示。</p>
+  </div>
+
+  <div class="ocv-options">
+    <div class="ocv-option" data-choice="single" onclick="toggleSelect(this)">
+      <h3>A · 单条快速录入</h3>
+      <p>适合人工补录和现场复测；输入一个电芯码后立即保存。</p>
+      <div class="ocv-window">
+        <div class="ocv-window-bar"><span>电芯追溯 / OCV测试</span><span>单条模式</span></div>
+        <div class="ocv-window-body">
+          <div class="ocv-title-row"><strong>OCV 测试录入</strong><span class="ocv-chip active">OCV1</span></div>
+          <div class="ocv-tabs"><span class="active">OCV1</span><span>OCV2</span></div>
+          <div class="ocv-field-row">
+            <div class="ocv-field"><label>批次号</label><div class="ocv-input">BATCH2026050001</div></div>
+            <div class="ocv-field"><label>电芯码</label><div class="ocv-input">BC2026050001007</div></div>
+          </div>
+          <div class="ocv-field-row">
+            <div class="ocv-field"><label>测试时间</label><div class="ocv-input">2026-08-05 19:10:24</div></div>
+            <div class="ocv-field"><label>设备编号</label><div class="ocv-input">OCV1-01</div></div>
+          </div>
+          <div class="ocv-field-row">
+            <div class="ocv-field"><label>电压 (V)</label><div class="ocv-input">3.2864</div></div>
+            <div class="ocv-field"><label>内阻 (mΩ)</label><div class="ocv-input">0.82</div></div>
+          </div>
+          <div class="ocv-actions"><button class="ocv-button">保存测试记录</button><button class="ocv-button secondary">清空</button></div>
+          <div class="ocv-note">保存前校验批次存在、测试时间有效；较早时间的数据不覆盖当前快照。</div>
+        </div>
+      </div>
+      <div class="ocv-footer"><span>适合：现场补录</span><strong>操作最少</strong></div>
+    </div>
+
+    <div class="ocv-option" data-choice="batch" onclick="toggleSelect(this)">
+      <h3>B · 批量表格录入</h3>
+      <p>一次处理多个电芯；适合设备文件导入或集中补录。</p>
+      <div class="ocv-window">
+        <div class="ocv-window-bar"><span>电芯追溯 / OCV测试</span><span>批量模式</span></div>
+        <div class="ocv-window-body">
+          <div class="ocv-title-row"><strong>OCV2 批量测试</strong><span class="ocv-chip active">1000 条上限</span></div>
+          <div class="ocv-toolbar"><div class="ocv-input" style="flex:1">BATCH2026050001</div><button class="ocv-button secondary">导入文件</button></div>
+          <div style="height: 10px"></div>
+          <table class="ocv-table">
+            <thead><tr><th>电芯码</th><th>测试时间</th><th>电压 V</th><th>内阻 mΩ</th><th>K 值</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td>BC...007</td><td>19:10:24</td><td>3.2864</td><td>0.82</td><td>1.0042</td><td class="ocv-status">待提交</td></tr>
+              <tr><td>BC...008</td><td>19:10:26</td><td>3.2859</td><td>0.80</td><td>1.0038</td><td class="ocv-status">待提交</td></tr>
+              <tr><td>BC...009</td><td>19:10:27</td><td>3.2871</td><td>0.83</td><td>1.0045</td><td class="ocv-status">待提交</td></tr>
+            </tbody>
+          </table>
+          <div class="ocv-actions" style="margin-top: 10px"><button class="ocv-button">提交 3 条</button><button class="ocv-button secondary">移除错误行</button></div>
+          <div class="ocv-note">错误行逐条提示；整批请求失败时不保存任何记录，成功后显示接收结果。</div>
+        </div>
+      </div>
+      <div class="ocv-footer"><span>适合：设备文件</span><strong>效率最高</strong></div>
+    </div>
+
+    <div class="ocv-option" data-choice="hybrid" onclick="toggleSelect(this)">
+      <h3>C · 单条 + 批量混合</h3>
+      <p>默认单条录入，保留批量入口；同一页面兼顾人工和设备场景。</p>
+      <div class="ocv-window">
+        <div class="ocv-window-bar"><span>电芯追溯 / OCV测试</span><span>混合模式</span></div>
+        <div class="ocv-window-body">
+          <div class="ocv-title-row"><strong>OCV 测试工作台</strong><span class="ocv-chip active">OCV1 / OCV2</span></div>
+          <div class="ocv-tabs"><span class="active">单条录入</span><span>批量录入</span><span>最近记录</span></div>
+          <div class="ocv-field-row">
+            <div class="ocv-field"><label>批次号</label><div class="ocv-input">BATCH2026050001</div></div>
+            <div class="ocv-field"><label>电芯码</label><div class="ocv-input">扫码或输入</div></div>
+          </div>
+          <div class="ocv-field-row">
+            <div class="ocv-field"><label>测试时间</label><div class="ocv-input">必填，按设备时间判定</div></div>
+            <div class="ocv-field"><label>设备编号</label><div class="ocv-input">OCV-01</div></div>
+          </div>
+          <div class="ocv-field-row">
+            <div class="ocv-field"><label>电压 (V)</label><div class="ocv-input">输入测试值</div></div>
+            <div class="ocv-field"><label>内阻 / K 值</label><div class="ocv-input">随 OCV 类型切换</div></div>
+          </div>
+          <div class="ocv-actions"><button class="ocv-button">保存并继续下一条</button><button class="ocv-button secondary">切换批量</button></div>
+          <div class="ocv-note">右侧或下方展示当前电芯最新快照；历史记录单独查看，不混入普通工序状态。</div>
+        </div>
+      </div>
+      <div class="ocv-footer"><span>适合：日常综合使用</span><strong>推荐默认</strong></div>
+    </div>
+  </div>
+</div>

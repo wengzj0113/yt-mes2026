@@ -1,0 +1,1 @@
+import{l as e,o as t}from"./auth-CFtg0-gU.js";function n(t){return e(`/packs`,t)}function r(e){return t(`/packs/${e}`)}function i(e=1,n=10){return t(`/packs`,{page:e,pageSize:n})}export{r as n,i as r,n as t};

@@ -1,0 +1,79 @@
+<h2>环形拓扑图中心“数据神经元”的设计</h2>
+<p class="subtitle">环形拓扑图的中心是整个大屏的视觉焦点，请选择您希望在中心区域展示的内容和视觉效果：</p>
+
+<div class="options">
+  <div class="option" data-choice="metrics" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>核心综合指标（推荐）</h3>
+      <p>在中心展示全厂的<strong>“数据完整率”</strong>或<strong>“优质品率”</strong>，配合大型环形进度条和呼吸灯动效。</p>
+      <div class="placeholder" style="height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); border: 1px dashed rgba(0, 229, 255, 0.3); border-radius: 4px; margin-top: 10px;">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <!-- Outer Ring -->
+          <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(0, 229, 255, 0.2)" stroke-width="6" />
+          <circle cx="60" cy="60" r="45" fill="none" stroke="#00e5ff" stroke-width="6" stroke-dasharray="282" stroke-dashoffset="56" stroke-linecap="round">
+            <animateTransform attributeName="transform" type="rotate" from="0 60 60" to="360 60 60" dur="10s" repeatCount="indefinite" />
+          </circle>
+          <!-- Inner Circle -->
+          <circle cx="60" cy="60" r="35" fill="rgba(0, 229, 255, 0.1)" />
+          <text x="60" y="55" font-size="10" fill="#a3c1e0" text-anchor="middle">数据完整率</text>
+          <text x="60" y="75" font-size="18" fill="#00e5ff" font-weight="bold" text-anchor="middle">98.5%</text>
+        </svg>
+      </div>
+      <p style="font-size: 12px; color: #a3c1e0; margin-top: 10px;"><strong>设计意图：</strong> 将最核心的业务指标放在视觉中心，既美观又具有极高的实用价值，让管理者一眼看清系统健康度。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="sse-flow" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>SSE 实时数据流统计</h3>
+      <p>展示当前正在流动的实时数据包数量、每秒处理的数据条数（TPS），配合向中心汇聚的光点粒子动效。</p>
+      <div class="placeholder" style="height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); border: 1px dashed rgba(0, 229, 255, 0.3); border-radius: 4px; margin-top: 10px;">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <!-- Center Node -->
+          <circle cx="60" cy="60" r="25" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2" />
+          <text x="60" y="58" font-size="8" fill="#a3c1e0" text-anchor="middle">实时吞吐量</text>
+          <text x="60" y="72" font-size="12" fill="#00e5ff" font-weight="bold" text-anchor="middle">124 条/秒</text>
+          
+          <!-- Incoming Particles -->
+          <circle cx="60" cy="20" r="3" fill="#00e5ff">
+            <animate attributeName="cy" values="20;60" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="1;0" dur="1.5s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="20" cy="60" r="3" fill="#00e5ff">
+            <animate attributeName="cx" values="20;60" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="1;0" dur="1.2s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="90" cy="90" r="3" fill="#00e5ff">
+            <animate attributeName="cx" values="90;60" dur="1.8s" repeatCount="indefinite" />
+            <animate attributeName="cy" values="90;60" dur="1.8s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="1;0" dur="1.8s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      </div>
+      <p style="font-size: 12px; color: #a3c1e0; margin-top: 10px;"><strong>设计意图：</strong> 极大地强化“数据神经中枢”的动态感，让大屏看起来非常“活”，适合展示系统的实时处理能力。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="tech-sphere" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>科技感旋转球体（纯视觉）</h3>
+      <p>展示一个炫酷的 3D 旋转数据球体或雷达扫描效果，作为纯视觉装饰，增强未来感和科技感。</p>
+      <div class="placeholder" style="height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); border: 1px dashed rgba(0, 229, 255, 0.3); border-radius: 4px; margin-top: 10px;">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <!-- Radar Scan -->
+          <circle cx="60" cy="60" r="40" fill="none" stroke="#00e5ff" stroke-width="1" />
+          <line x1="60" y1="60" x2="100" y2="60" stroke="#00e5ff" stroke-width="2">
+            <animateTransform attributeName="transform" type="rotate" from="0 60 60" to="360 60 60" dur="3s" repeatCount="indefinite" />
+          </line>
+          <!-- Sphere grid -->
+          <ellipse cx="60" cy="60" rx="40" ry="15" fill="none" stroke="rgba(0, 229, 255, 0.4)" stroke-width="1" />
+          <ellipse cx="60" cy="60" rx="15" ry="40" fill="none" stroke="rgba(0, 229, 255, 0.4)" stroke-width="1" />
+        </svg>
+      </div>
+      <p style="font-size: 12px; color: #a3c1e0; margin-top: 10px;"><strong>设计意图：</strong> 纯粹的视觉包装，适合展厅展示，给参观者留下深刻的科技感印象，但信息承载量较低。</p>
+    </div>
+  </div>
+</div>

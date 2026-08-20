@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Like } from 'typeorm';
 import { ProcessDictionary } from './process-dictionary.entity';
-import { mergeFieldDefinitionsWithBaseline, OCV_PROCESS_FIELDS, PROCESS_BASELINE } from '../process-baseline';
+import { getProcessBaseline, hasIncompatibleFieldDefinitions, mergeFieldDefinitionsWithBaseline, OCV_PROCESS_FIELDS, PROCESS_BASELINE } from '../process-baseline';
 
 @Injectable()
 export class ProcessDictionaryService implements OnModuleInit {
@@ -62,7 +62,19 @@ export class ProcessDictionaryService implements OnModuleInit {
     return process;
   }
 
-  async findByCode(processCode: string): Promise<ProcessDictionary | null> { return this.processDictRepo.findOne({ where: { processCode } }); }
+  async findByCode(processCode: string): Promise<ProcessDictionary | null> {
+    const process = await this.processDictRepo.findOne({ where: { processCode } });
+    const baseline = getProcessBaseline(processCode);
+    if (!process || !baseline) return process;
+
+    if (hasIncompatibleFieldDefinitions(process.fieldDefinitions, baseline.fieldDefinitions)) {
+      return { ...process, fieldDefinitions: JSON.stringify(baseline.fieldDefinitions) };
+    }
+    return {
+      ...process,
+      fieldDefinitions: process.fieldDefinitions,
+    };
+  }
   async create(data: Partial<ProcessDictionary>): Promise<ProcessDictionary> { return this.processDictRepo.save(this.processDictRepo.create(data)); }
   async update(id: number, data: Partial<ProcessDictionary>): Promise<ProcessDictionary> {
     const editableFields: Array<keyof ProcessDictionary> = ['processName', 'sortOrder', 'isActive', 'description', 'fieldDefinitions'];

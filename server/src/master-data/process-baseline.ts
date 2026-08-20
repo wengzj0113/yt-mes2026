@@ -48,6 +48,39 @@ export function mergeFieldDefinitionsWithBaseline(
   return merged;
 }
 
+export function hasIncompatibleFieldDefinitions(
+  existingJson: string | null | undefined,
+  baselineFields: readonly ProcessFieldDefinition[],
+): boolean {
+  if (!existingJson) return false;
+
+  let existingFields: Array<Record<string, unknown>>;
+  try {
+    const parsed = JSON.parse(existingJson);
+    if (!Array.isArray(parsed)) return true;
+    existingFields = parsed.filter((field) => field && typeof field === 'object');
+  } catch {
+    return true;
+  }
+
+  const seenKeys = new Set<string>();
+  const seenRangeKeys = new Set<string>();
+  for (const field of existingFields) {
+    const key = String(field.key ?? '').trim();
+    if (!key || seenKeys.has(key)) return true;
+    seenKeys.add(key);
+
+    if (field.type === 'range') {
+      const minKey = String(field.minKey ?? '').trim();
+      const maxKey = String(field.maxKey ?? '').trim();
+      if (!minKey || !maxKey || minKey === maxKey || seenRangeKeys.has(minKey) || seenRangeKeys.has(maxKey)) return true;
+      seenRangeKeys.add(minKey);
+      seenRangeKeys.add(maxKey);
+    }
+  }
+  return false;
+}
+
 const text = (key: string, label: string, group = '工艺参数'): ProcessFieldDefinition => ({
   group, key, label, type: 'text', required: true, isSystem: true,
 });

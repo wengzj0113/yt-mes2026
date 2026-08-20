@@ -1,0 +1,136 @@
+<h2>大屏看板页面设计优化 - 最终设计方案</h2>
+<p class="subtitle">基于您的选择，我们已确定了最终的设计方案。请确认以下设计细节：</p>
+
+<div class="mockup" style="margin-bottom: 20px;">
+  <div class="mockup-header">大屏看板最终布局规划 (方案 A + 环形拓扑 + 核心指标中心)</div>
+  <div class="mockup-body" style="background: #030409; color: #fff; padding: 20px; font-family: sans-serif;">
+    <!-- Top Header -->
+    <div style="border-bottom: 2px solid #00e5ff; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 20px; color: #00e5ff; font-weight: bold; letter-spacing: 2px;">追溯数据神经中枢</span>
+      <div style="display: flex; gap: 20px; font-size: 12px; color: #a3c1e0;">
+        <span>新增追溯电芯: <strong style="color: #00e5ff;">1,245</strong></span>
+        <span>数据完整率: <strong style="color: #00e5ff;">98.5%</strong></span>
+        <span>优质品率: <strong style="color: #00e5ff;">92.1%</strong></span>
+        <span>异常待处理: <strong style="color: #f56c6c;">3</strong></span>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div style="display: flex; gap: 20px; height: 320px;">
+      <!-- Left Panel -->
+      <div style="flex: 1; border: 1px solid rgba(0, 229, 255, 0.3); padding: 10px; background: rgba(0, 229, 255, 0.02); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h4 style="color: #00e5ff; margin: 0 0 10px 0; border-bottom: 1px solid rgba(0, 229, 255, 0.2); padding-bottom: 5px;">追溯健康度预警 (WIP)</h4>
+          <div style="font-size: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <div style="background: rgba(0, 229, 255, 0.1); padding: 4px; display: flex; justify-content: space-between;"><span>配料 WIP</span><span style="color: #00e5ff; font-weight: bold;">12</span></div>
+            <div style="background: rgba(0, 229, 255, 0.1); padding: 4px; display: flex; justify-content: space-between;"><span>涂布 WIP</span><span style="color: #00e5ff; font-weight: bold;">8</span></div>
+            <div style="background: rgba(0, 229, 255, 0.1); padding: 4px; display: flex; justify-content: space-between;"><span>辊压 WIP</span><span style="color: #00e5ff; font-weight: bold;">15</span></div>
+            <div style="background: rgba(0, 229, 255, 0.1); padding: 4px; display: flex; justify-content: space-between;"><span>分切 WIP</span><span style="color: #00e5ff; font-weight: bold;">5</span></div>
+          </div>
+        </div>
+        <div style="margin-top: 10px;">
+          <h4 style="color: #f56c6c; margin: 0 0 10px 0; border-bottom: 1px solid rgba(245, 108, 108, 0.2); padding-bottom: 5px;">实时生产异常告警</h4>
+          <div style="font-size: 10px; height: 80px; overflow: hidden; color: #ff8f8f;">
+            <div style="margin-bottom: 4px; border-left: 2px solid #f56c6c; padding-left: 5px;">[14:32:10] 涂布工序: 温度超限异常告警</div>
+            <div style="margin-bottom: 4px; border-left: 2px solid #e6a23c; padding-left: 5px;">[14:28:45] 辊压工序: 压力微幅波动预警</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Panel -->
+      <div style="flex: 1.5; border: 1px solid rgba(0, 229, 255, 0.5); padding: 10px; background: rgba(0, 229, 255, 0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+        <h4 style="color: #00e5ff; margin: 0; position: absolute; top: 10px;">13道工序数据链路流转图</h4>
+        
+        <!-- SVG Ring Mockup -->
+        <svg width="200" height="200" viewBox="0 0 200 200" style="margin-top: 20px;">
+          <!-- Center Node -->
+          <circle cx="100" cy="100" r="30" fill="rgba(0, 229, 255, 0.15)" stroke="#00e5ff" stroke-width="2" />
+          <text x="100" y="95" font-size="8" fill="#a3c1e0" text-anchor="middle">数据完整率</text>
+          <text x="100" y="112" font-size="14" fill="#00e5ff" font-weight="bold" text-anchor="middle">98.5%</text>
+          
+          <!-- Outer Ring Path -->
+          <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(0, 229, 255, 0.2)" stroke-width="1" stroke-dasharray="4" />
+          
+          <!-- 13 Nodes (simplified to 8 for mockup) -->
+          <circle cx="100" cy="30" r="8" fill="#00e5ff" /><text x="100" y="22" font-size="6" fill="#fff" text-anchor="middle">配料</text>
+          <circle cx="150" cy="50" r="8" fill="#00e5ff" /><text x="162" y="52" font-size="6" fill="#fff" text-anchor="start">涂布</text>
+          <circle cx="170" cy="100" r="8" fill="#00e5ff" /><text x="182" y="102" font-size="6" fill="#fff" text-anchor="start">辊压</text>
+          <circle cx="150" cy="150" r="8" fill="#00e5ff" />
+          <circle cx="100" cy="170" r="8" fill="#00e5ff" />
+          <circle cx="50" cy="150" r="8" fill="#00e5ff" />
+          <circle cx="30" cy="100" r="8" fill="#00e5ff" /><text x="18" y="102" font-size="6" fill="#fff" text-anchor="end">分选</text>
+          <circle cx="50" cy="50" r="8" fill="#00e5ff" />
+          
+          <!-- Flowing light dot -->
+          <circle cx="125" cy="35" r="3" fill="#fff">
+            <animateMotion path="M 100 30 A 70 70 0 1 1 99 30" dur="5s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      </div>
+
+      <!-- Right Panel -->
+      <div style="flex: 1; border: 1px solid rgba(0, 229, 255, 0.3); padding: 10px; background: rgba(0, 229, 255, 0.02); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h4 style="color: #00e5ff; margin: 0 0 10px 0; border-bottom: 1px solid rgba(0, 229, 255, 0.2); padding-bottom: 5px;">实时分选结果滚播</h4>
+          <div style="font-size: 9px; border: 1px solid rgba(0, 229, 255, 0.2);">
+            <div style="display: flex; background: rgba(0, 229, 255, 0.2); padding: 3px; font-weight: bold;">
+              <span style="flex: 1.5;">条码</span><span style="flex: 1;">电压</span><span style="flex: 1;">内阻</span><span style="flex: 1;">档位</span>
+            </div>
+            <div style="padding: 3px; border-bottom: 1px solid rgba(0, 229, 255, 0.1); display: flex;">
+              <span style="flex: 1.5; color: #00e5ff;">CELL001</span><span style="flex: 1;">3.21V</span><span style="flex: 1;">15mΩ</span><span style="flex: 1; color: #67c23a;">A档</span>
+            </div>
+            <div style="padding: 3px; display: flex;">
+              <span style="flex: 1.5; color: #00e5ff;">CELL002</span><span style="flex: 1;">3.20V</span><span style="flex: 1;">16mΩ</span><span style="flex: 1; color: #67c23a;">A档</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 10px;">
+          <h4 style="color: #00e5ff; margin: 0 0 10px 0; border-bottom: 1px solid rgba(0, 229, 255, 0.2); padding-bottom: 5px;">质量合格率趋势 (最近10批次)</h4>
+          <!-- Mini Line Chart Mockup -->
+          <div style="height: 80px; display: flex; align-items: flex-end; gap: 10px; padding: 5px; background: rgba(0, 229, 255, 0.05);">
+            <div style="flex: 1; height: 80%; background: rgba(0, 229, 255, 0.3); position: relative;"><span style="position: absolute; top: -12px; left: 0; font-size: 8px;">95%</span></div>
+            <div style="flex: 1; height: 85%; background: rgba(0, 229, 255, 0.3);"></div>
+            <div style="flex: 1; height: 90%; background: rgba(0, 229, 255, 0.3);"></div>
+            <div style="flex: 1; height: 95%; background: rgba(0, 229, 255, 0.5); border-top: 2px solid #00e5ff;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>设计方案详细说明</h3>
+  <ul>
+    <li><strong>数据源集成：</strong>
+      <ul>
+        <li><strong>SSE 实时流：</strong> 保持与 `/api/dashboard/stream` 的连接，实时更新顶部指标、WIP 列表、分选结果滚播，以及环形拓扑图的节点状态和流动光点。</li>
+        <li><strong>API 轮询/一次性加载：</strong> 引入 `systemApi.logs` 获取实时生产异常告警（过滤出错误/异常日志），引入 `qualityApi.getTrends` 获取最近 10 批次的质量合格率趋势。</li>
+      </ul>
+    </li>
+    <li><strong>环形拓扑图交互与动效：</strong>
+      <ul>
+        <li>使用 <strong>SVG</strong> 绘制 13 个工序节点，呈环形均匀分布。</li>
+        <li>节点颜色根据该工序的 WIP 积压情况动态变化（正常为青色，积压过多为黄色/橙色，设备异常为红色）。</li>
+        <li>中心展示“数据完整率”或“优质品率”的环形进度条，带有顺时针旋转的渐变边框和呼吸灯投影。</li>
+        <li>光点动画（`<animateMotion>`）沿着环形路径流动，表示数据的实时流转。</li>
+      </ul>
+    </li>
+    <li><strong>新增组件：</strong>
+      <ul>
+        <li><strong>实时生产异常告警滚动列表：</strong> 放置在左侧面板下方，展示最近的设备/工艺异常，支持自动滚动。</li>
+        <li><strong>质量合格率趋势折线图：</strong> 放置在右侧面板下方，使用 ECharts 绘制精美的科技感折线图。</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>批准此设计方案</h3>
+      <p>方案完全符合预期，可以开始编写设计文档并准备实施。</p>
+    </div>
+  </div>
+</div>

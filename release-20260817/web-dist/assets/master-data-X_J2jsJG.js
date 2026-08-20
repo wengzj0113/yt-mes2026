@@ -1,0 +1,1 @@
+import{o as e}from"./auth-CFtg0-gU.js";var t={departments(){return e(`/departments`)},equipment(){return e(`/equipment`)},operators(){return e(`/users/operators`)},qualityPersonnel(){return e(`/users/quality-personnel`)}};export{t};

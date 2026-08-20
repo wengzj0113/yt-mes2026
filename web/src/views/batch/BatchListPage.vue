@@ -41,6 +41,15 @@
                 <el-button size="small" type="warning" @click.stop>关闭批次</el-button>
               </template>
             </el-popconfirm>
+            <el-popconfirm
+              title="确认恢复该批次？恢复后状态将变为进行中。"
+              @confirm.stop="handleRestore(row)"
+              v-if="row.status === 4"
+            >
+              <template #reference>
+                <el-button size="small" type="success" @click.stop>恢复批次</el-button>
+              </template>
+            </el-popconfirm>
           </template>
         </el-table-column>
       </el-table>
@@ -256,6 +265,16 @@ async function handleClose(row: BatchDto) {
   try {
     await batchApi.update(row.batchNo, { status: 4 })
     ElMessage.success('批次已关闭')
+    loadData()
+  } catch {
+    // Error handled by interceptor
+  }
+}
+
+async function handleRestore(row: BatchDto) {
+  try {
+    await batchApi.update(row.batchNo, { status: 2 })
+    ElMessage.success('批次已恢复为进行中')
     loadData()
   } catch {
     // Error handled by interceptor

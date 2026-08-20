@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Batch } from '../batch/batch.entity';
-import { getProcessBaseline } from '../master-data/process-baseline';
+import { getProcessBaseline, hasIncompatibleFieldDefinitions } from '../master-data/process-baseline';
 import { ProcessDictionary } from '../master-data/process-dictionary/process-dictionary.entity';
 import { ProcessDynamicRecord } from './process-dynamic-record.entity';
 
@@ -20,6 +20,12 @@ export class ProcessDynamicService {
 
   private async getFieldDefinitions(processCode: string) {
     const dictionary = await this.dictionaryRepo.findOne({ where: { processCode } });
+    const baseline = getProcessBaseline(processCode);
+    if (baseline) {
+      if (hasIncompatibleFieldDefinitions(dictionary?.fieldDefinitions, baseline.fieldDefinitions)) {
+        return baseline.fieldDefinitions;
+      }
+    }
     if (dictionary?.fieldDefinitions) {
       try {
         const fields = JSON.parse(dictionary.fieldDefinitions);
@@ -34,6 +40,20 @@ export class ProcessDynamicService {
     const missing: string[] = [];
     const invalid: string[] = [];
     for (const field of fields) {
+      if (field.type === 'range' && field.minKey && field.maxKey) {
+        const minValue = data[field.minKey];
+        const maxValue = data[field.maxKey];
+        if (field.required !== false && (minValue === undefined || minValue === null || String(minValue).trim() === '')) {
+          missing.push(field.minLabel || `${field.label}最小值`);
+        }
+        if (field.required !== false && (maxValue === undefined || maxValue === null || String(maxValue).trim() === '')) {
+          missing.push(field.maxLabel || `${field.label}最大值`);
+        }
+        if (minValue !== undefined && minValue !== null && String(minValue).trim() !== '' && !Number.isFinite(Number(minValue))) invalid.push(field.minLabel || `${field.label}最小值`);
+        if (maxValue !== undefined && maxValue !== null && String(maxValue).trim() !== '' && !Number.isFinite(Number(maxValue))) invalid.push(field.maxLabel || `${field.label}最大值`);
+        if (Number.isFinite(Number(minValue)) && Number.isFinite(Number(maxValue)) && Number(minValue) > Number(maxValue)) invalid.push(field.label);
+        continue;
+      }
       const value = data[field.key];
       if (field.required !== false && (value === undefined || value === null || String(value).trim() === '')) {
         missing.push(field.label || field.key);

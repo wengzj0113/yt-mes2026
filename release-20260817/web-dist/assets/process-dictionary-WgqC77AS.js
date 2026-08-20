@@ -1,0 +1,1 @@
+import{l as e,o as t,s as n,u as r}from"./auth-CFtg0-gU.js";var i={list(e){return t(`/process-dictionary`,e)},create(t){return e(`/process-dictionary`,t)},update(e,t){return r(`/process-dictionary/${e}`,t)},findByCode(e){return t(`/process-dictionary/code/${e}`)},delete(e){return n(`/process-dictionary/${e}`)}};export{i as t};

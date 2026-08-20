@@ -1,0 +1,1 @@
+import{l as e,o as t}from"./auth-CFtg0-gU.js";var n={list(e){return t(`/batches/${e}/materials`)},create(t,n){return e(`/batches/${t}/materials`,n)},getAvailable(e,n){return t(`/batches/${e}/materials/available`,{type:n})}};export{n as t};

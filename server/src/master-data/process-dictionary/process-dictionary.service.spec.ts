@@ -148,6 +148,41 @@ describe('ProcessDictionaryService', () => {
       expect(processes.find(process => process.processCode === 'ocv1')?.sortOrder).toBe(150);
       expect(processes.find(process => process.processCode === 'ocv2')?.sortOrder).toBe(155);
     });
+
+    it('returns canonical roller fields when stored configuration has shared range keys', async () => {
+      repo.findOne.mockResolvedValue({
+        processCode: 'roller-pressing',
+        fieldDefinitions: JSON.stringify([
+          {
+            key: 'positiveRollerThickness',
+            label: '正极片辊压厚度',
+            type: 'range',
+            minKey: 'rollerThickness',
+            maxKey: 'rollerThickness',
+          },
+          {
+            key: 'negativeRollerThickness',
+            label: '负极片辊压厚度',
+            type: 'range',
+            minKey: 'rollerThickness',
+            maxKey: 'rollerThickness',
+          },
+        ]),
+      });
+
+      const result = await service.findByCode('roller-pressing');
+      const fields = JSON.parse(result!.fieldDefinitions);
+      const rollerBaseline = getProcessBaseline('roller-pressing')!;
+
+      expect(fields.map((field: any) => field.key)).toEqual(
+        rollerBaseline.fieldDefinitions.map((field) => field.key),
+      );
+      expect(fields).toEqual(expect.arrayContaining([
+        expect.objectContaining({ key: 'positiveRollerThickness', type: 'number' }),
+        expect.objectContaining({ key: 'negativeRollerThickness', type: 'number' }),
+      ]));
+      expect(new Set(fields.map((field: any) => field.key)).size).toBe(fields.length);
+    });
   });
 
   describe('remove', () => {

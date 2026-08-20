@@ -1,0 +1,3 @@
+import{n as e}from"./auth-CFtg0-gU.js";function t(t,n,r){let i=e(),a=new AbortController;async function o(){try{let e=await fetch(t,{headers:{Authorization:`Bearer ${i.token}`},signal:a.signal});if(!e.ok){r?.(Error(`SSE connection failed: ${e.status}`));return}let o=e.body?.getReader();if(!o){r?.(Error(`SSE: Response body not readable`));return}let s=new TextDecoder,c=``;for(;;){let{done:e,value:t}=await o.read();if(e)break;c+=s.decode(t,{stream:!0});let r=c.split(`
+
+`);c=r.pop()??``;for(let e of r){let t=e.match(/^data: (.+)$/m);if(t)try{n(JSON.parse(t[1]))}catch{}}}}catch(e){if(e instanceof Error&&e.name===`AbortError`)return;r?.(e)}}return o(),{close:()=>a.abort()}}export{t as createAuthEventSource};

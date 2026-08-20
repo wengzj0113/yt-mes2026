@@ -1,0 +1,1 @@
+import{l as e,o as t}from"./auth-CFtg0-gU.js";var n={list(){return t(`/departments`)},create(t){return e(`/departments`,t)},update(t,n){return e(`/departments/${t}`,n)},delete(t){return e(`/departments/${t}/delete`)}};export{n as t};

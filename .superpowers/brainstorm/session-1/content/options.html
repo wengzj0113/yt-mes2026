@@ -1,0 +1,94 @@
+<h2>大屏看板页面设计优化方案选择</h2>
+<p class="subtitle">结合本系统的生产追溯、工序WIP、质量分选及异常告警数据，为您设计了以下三个优化方案。请在浏览器中查看并选择您倾向的方案，或在终端中提出您的修改意见。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>方案 A：数据链路与追溯中心（推荐）</h3>
+      <p><strong>核心定位：</strong> 突出“追溯数据神经中枢”的定位，强化数据流向与实时预警。</p>
+      <p><strong>布局设计：</strong></p>
+      <ul>
+        <li><strong>中间核心区：</strong> 绘制精美的 <strong>13道工序数据链路流转拓扑图</strong>（SVG 动效），实时展示电芯在各工序的流转路径，SSE 实时数据流以光点动画形式在链路上流动。</li>
+        <li><strong>左侧面板：</strong> 追溯健康度预警（WIP 列表） + <strong>新增：实时生产异常告警滚动列表</strong>（从工作台引入，红色/黄色警示，强化预警功能）。</li>
+        <li><strong>右侧面板：</strong> 实时质量成果（分选结果滚播） + <strong>新增：质量合格率趋势折线图</strong>（最近10批次，展示质量稳定性）。</li>
+        <li><strong>顶部指标：</strong> 新增追溯电芯、数据完整率、优质品率、异常待处理数。</li>
+      </ul>
+      <div class="pros-cons" style="margin-top: 10px;">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>完美契合“追溯中枢”主题，数据流向极具科技感</li>
+            <li>动静结合，SSE 实时数据流的视觉效果最强</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>劣势</h4>
+          <ul>
+            <li>SVG 拓扑图开发成本稍高</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>方案 B：生产效能与质量监控中心</h3>
+      <p><strong>核心定位：</strong> 侧重于生产效率、批次进度与整体质量控制，适合管理决策。</p>
+      <p><strong>布局设计：</strong></p>
+      <ul>
+        <li><strong>中间核心区：</strong> <strong>当日合格率大仪表盘</strong>（ECharts Gauge，强化视觉冲击力） + <strong>13道工序 WIP 堆叠柱状图</strong>（直观对比各工序积压与通过量）。</li>
+        <li><strong>左侧面板：</strong> <strong>最近批次流转进度看板</strong>（引入工作台的批次进度条，以大屏科技感样式展示，支持滚动）。</li>
+        <li><strong>右侧面板：</strong> 实时质量成果（分选结果滚播） + 实时生产异常告警。</li>
+        <li><strong>顶部指标：</strong> 累计生产批次、当前在线批次、当日合格率、异常待处理。</li>
+      </ul>
+      <div class="pros-cons" style="margin-top: 10px;">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>管理指标更全面，批次进度和合格率一目了然</li>
+            <li>图表组件化程度高，开发速度快</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>劣势</h4>
+          <ul>
+            <li>相比方案 A，缺少了工序链路的直观流向感</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>方案 C：数字化孪生拓扑看板</h3>
+      <p><strong>核心定位：</strong> 侧重于高视觉冲击力与未来感，适合展厅汇报与品牌展示。</p>
+      <p><strong>布局设计：</strong></p>
+      <ul>
+        <li><strong>中间核心区：</strong> <strong>环形/网状数字化孪生拓扑图</strong>。13道工序呈环形分布，中心为数据汇聚核心，节点带有呼吸灯效果，表示设备在线状态和工序负荷。</li>
+        <li><strong>左侧面板：</strong> 工序 WIP 实时排行（Top 5 积压工序） + <strong>异常告警雷达图</strong>（展示各工序异常频次分布）。</li>
+        <li><strong>右侧面板：</strong> <strong>实时分选数据瀑布流</strong>（炫酷的瀑布流形式展示分选条码和档位分布） + 质量合格率趋势。</li>
+        <li><strong>顶部指标：</strong> 新增追溯电芯、数据完整率、优质品率、当日合格率。</li>
+      </ul>
+      <div class="pros-cons" style="margin-top: 10px;">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>视觉效果最炫酷，极具未来感和极客风</li>
+            <li>适合大屏展示和外部参观汇报</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>劣势</h4>
+          <ul>
+            <li>信息密度较低，实用性略逊于方案 A 和 B</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

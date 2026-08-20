@@ -1,0 +1,101 @@
+<h2>13道工序数据链路流转图的布局形式</h2>
+<p class="subtitle">为了在中间核心区最美观、清晰地展示 13 道工序的实时流转，请选择您倾向的拓扑图布局形式：</p>
+
+<div class="options">
+  <div class="option" data-choice="linear" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>单排水平线性流转（从左到右）</h3>
+      <p>所有工序排成一行，从左至右单向流转。适合展示极简的工艺流程。</p>
+      <div class="placeholder" style="height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); border: 1px dashed rgba(0, 229, 255, 0.3); border-radius: 4px; margin-top: 10px;">
+        <svg width="90%" height="60" viewBox="0 0 600 60">
+          <!-- Nodes -->
+          <circle cx="30" cy="30" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="30" y="35" font-size="10" fill="#000" text-anchor="middle">配料</text>
+          
+          <line x1="45" y1="30" x2="95" y2="30" stroke="#00e5ff" stroke-width="2" marker-end="url(#arrow)" />
+          
+          <circle cx="110" cy="30" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="110" y="35" font-size="10" fill="#000" text-anchor="middle">涂布</text>
+          
+          <line x1="125" y1="30" x2="175" y2="30" stroke="#00e5ff" stroke-width="2" />
+          
+          <circle cx="190" cy="30" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="190" y="35" font-size="10" fill="#000" text-anchor="middle">辊压</text>
+          
+          <text x="250" y="35" font-size="20" fill="#00e5ff" text-anchor="middle">...</text>
+          
+          <circle cx="310" cy="30" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="310" y="35" font-size="10" fill="#000" text-anchor="middle">分选</text>
+        </svg>
+      </div>
+      <p style="font-size: 12px; color: #a3c1e0; margin-top: 10px;"><strong>优缺点：</strong> 流程极度清晰，但 13 个节点在水平方向上会非常拥挤，文字和 WIP 数据展示空间有限。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="double-row" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>双排折返流转（S型折返）</h3>
+      <p>工序分为上下两排展示。第一排展示前 7 道工序（配料至装配），第二排展示后 6 道工序（烘烤至分选），通过折返箭头连接。</p>
+      <div class="placeholder" style="height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); border: 1px dashed rgba(0, 229, 255, 0.3); border-radius: 4px; margin-top: 10px;">
+        <svg width="80%" height="100" viewBox="0 0 400 100">
+          <!-- Row 1 -->
+          <circle cx="30" cy="25" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="30" y="29" font-size="9" fill="#000" text-anchor="middle">配料</text>
+          <line x1="45" y1="25" x2="85" y2="25" stroke="#00e5ff" stroke-width="2" />
+          <circle cx="100" cy="25" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="100" y="29" font-size="9" fill="#000" text-anchor="middle">涂布</text>
+          <line x1="115" y1="25" x2="155" y2="25" stroke="#00e5ff" stroke-width="2" />
+          <text x="180" y="29" font-size="16" fill="#00e5ff" text-anchor="middle">...</text>
+          <circle cx="260" cy="25" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="260" y="29" font-size="9" fill="#000" text-anchor="middle">装配</text>
+          
+          <!-- Turn -->
+          <path d="M 275 25 L 310 25 A 25 25 0 0 1 310 75 L 275 75" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="4" />
+          
+          <!-- Row 2 -->
+          <circle cx="260" cy="75" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="260" y="79" font-size="9" fill="#000" text-anchor="middle">烘烤</text>
+          <line x1="245" y1="75" x2="205" y2="75" stroke="#00e5ff" stroke-width="2" />
+          <text x="180" y="79" font-size="16" fill="#00e5ff" text-anchor="middle">...</text>
+          <circle cx="100" cy="75" r="15" fill="#00e5ff" opacity="0.8" />
+          <text x="100" y="79" font-size="9" fill="#000" text-anchor="middle">分选</text>
+        </svg>
+      </div>
+      <p style="font-size: 12px; color: #a3c1e0; margin-top: 10px;"><strong>优缺点：</strong> 空间利用率最高，每个节点有充足的空间展示工序名称、实时 WIP 数量和设备状态，非常适合 13 道工序的展示。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="circular" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>环形拓扑流转（数据汇聚中心）</h3>
+      <p>13道工序呈环形围绕中心分布，中心为“数据神经元”核心，各工序数据向中心汇聚，工序间按顺时针方向流转。</p>
+      <div class="placeholder" style="height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); border: 1px dashed rgba(0, 229, 255, 0.3); border-radius: 4px; margin-top: 10px;">
+        <svg width="80%" height="110" viewBox="0 0 200 110">
+          <!-- Center -->
+          <circle cx="100" cy="55" r="18" fill="none" stroke="#00e5ff" stroke-width="2" />
+          <circle cx="100" cy="55" r="12" fill="#00e5ff" opacity="0.3" />
+          <text x="100" y="58" font-size="8" fill="#00e5ff" text-anchor="middle">中枢</text>
+          
+          <!-- Nodes around -->
+          <circle cx="100" cy="15" r="10" fill="#00e5ff" opacity="0.8" />
+          <circle cx="140" cy="25" r="10" fill="#00e5ff" opacity="0.8" />
+          <circle cx="160" cy="55" r="10" fill="#00e5ff" opacity="0.8" />
+          <circle cx="140" cy="85" r="10" fill="#00e5ff" opacity="0.8" />
+          <circle cx="100" cy="95" r="10" fill="#00e5ff" opacity="0.8" />
+          <circle cx="60" cy="85" r="10" fill="#00e5ff" opacity="0.8" />
+          <circle cx="40" cy="55" r="10" fill="#00e5ff" opacity="0.8" />
+          <circle cx="60" cy="25" r="10" fill="#00e5ff" opacity="0.8" />
+          
+          <!-- Lines to center -->
+          <line x1="100" y1="25" x2="100" y2="37" stroke="#00e5ff" stroke-width="1" stroke-dasharray="2" />
+          <line x1="140" y1="35" x2="113" y2="46" stroke="#00e5ff" stroke-width="1" stroke-dasharray="2" />
+          <line x1="150" y1="55" x2="118" y2="55" stroke="#00e5ff" stroke-width="1" stroke-dasharray="2" />
+        </svg>
+      </div>
+      <p style="font-size: 12px; color: #a3c1e0; margin-top: 10px;"><strong>优缺点：</strong> 视觉冲击力极强，极具科技感和对称美，但流程的先后顺序不如线性或双排直观。</p>
+    </div>
+  </div>
+</div>

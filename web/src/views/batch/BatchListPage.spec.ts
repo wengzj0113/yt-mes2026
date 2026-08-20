@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import BatchListPage from './BatchListPage.vue'
+import { batchApi } from '@/api/batch'
 import { masterDataApi } from '@/api/master-data'
 
 vi.mock('@/api/batch', () => ({
@@ -9,7 +10,7 @@ vi.mock('@/api/batch', () => ({
     list: vi.fn().mockResolvedValue({
       data: {
         items: [
-          { id: 1, batchNo: 'WT26A01MA', productModel: 'M1', productSpec: 'S1', plannedQty: 1000, status: 2, isDraft: false, createdAt: '2026-01-01' },
+          { id: 1, batchNo: 'WT26A01MA', productModel: 'M1', productSpec: 'S1', plannedQty: 1000, status: 4, isDraft: false, createdAt: '2026-01-01' },
         ],
         total: 1,
       },
@@ -17,6 +18,7 @@ vi.mock('@/api/batch', () => ({
       message: 'ok',
     }),
     create: vi.fn().mockResolvedValue({ data: { batchNo: 'NEW001' }, success: true, message: 'ok' }),
+    update: vi.fn().mockResolvedValue({ data: {}, success: true, message: 'ok' }),
     generateNo: vi.fn().mockResolvedValue({ data: { batchNo: 'WT26A01MA' }, success: true, message: 'ok' }),
   },
 }))
@@ -83,5 +85,21 @@ describe('BatchListPage', () => {
     expect(masterDataApi.departments).toHaveBeenCalled()
     expect((wrapper.vm as any).workshopOptions).toHaveLength(1)
     expect((wrapper.vm as any).workshopOptions[0].label).toBe((wrapper.vm as any).workshopOptions[0].value)
+  })
+
+  it('shows a restore action for closed batches', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('恢复批次')
+  })
+
+  it('restores a closed batch to in progress', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    await (wrapper.vm as any).handleRestore({ batchNo: 'WT26A01MA', status: 4 })
+
+    expect(batchApi.update).toHaveBeenCalledWith('WT26A01MA', { status: 2 })
   })
 })
